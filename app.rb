@@ -133,58 +133,203 @@ __END__
 
 
 @@ style
-.class1
-  display: inline-table
-  height: 100
-  margin: 3
+$border-color: #e9ecef
 
-.class2
-  width: 100
-  height: 200
-  overflow: auto
+$book-details-paragraph-font-color: #7e8f9d
+$book-details-lite-font-color: #cdcdcd
+$book-details-author-font-color: #989898
 
-.book_title
-  background-color: yellowgreen
+@mixin tag
+  background-color: $border-color
+  color: inherit
+  display: inline-block
+  font-size: .9em
+  margin: 4px
+  padding: 4px 8px
+  text-decoration: none
 
-.book_subjects
-  overflow: auto
+  &:hover
+    background-color: darken($border-color, 5%)
 
-.book_author
-  background-color: lightgrey
+html
+  box-sizing: border-box
 
+*, *:before, *:after
+  box-sizing: inherit
+
+body
+  background-color: #f2f5f7
+  color: #434f59
+  font-family: Helvetica, Arial, sans-serif
+
+.books
+  margin: 0
+  padding: 0
+  list-style: none
+
+  @media (min-width: 600px)
+    display: flex
+    flex-wrap: wrap
+    width: 100%
+
+  > li
+    display: block
+
+    @media (min-width: 600px)
+      flex: 1 50%
+
+.book
+  background-color: #fff
+  border-radius: 4px
+  border: 1px solid $border-color
+  display: block
+  margin: 7px
+  overflow: hidden
+
+  @media (max-width: 599px)
+    text-align: center
+
+  &::after
+    clear: both
+    content: ''
+    display: table
+
+  @media (min-width: 900px)
+    display: inline-block
+    max-width: 420px
+    vertical-align: top
+    width: 100%
+
+.book-cover,
+.book-details
+  display: block
+  width: 100%
+  padding: 15px
+
+  @media (min-width: 600px)
+    float: left
+
+.book-cover
+  width: 100%
+
+  @media (min-width: 600px)
+    width: 31.12%
+
+  img
+    box-shadow: 0 0 8px rgba(0,0,0,.25)
+    width: 50%
+
+    @media (min-width: 600px)
+      width: 100%
+
+.book-details
+  @media (min-width: 600px)
+    width: 68.88%
+
+  p
+    color: $book-details-paragraph-font-color
+
+.book__title,
+.book__author
+  @media (max-width: 599px)
+    text-align: center
+
+.book__title
+  font: 500 1.4em 'Quicksand', sans-serif
+  margin-bottom: 0
+  margin-top: 0
+
+  @media (min-width: 600px)
+    margin-top: .5em
+
+  a
+    color: inherit
+    text-decoration: none
+
+.book__author
+  color: $book-details-author-font-color
+  margin-top: .5em
+
+.book__subjects
+  margin-top: 20px
+  font-size: 14px
+
+.subject__title
+  display: block
+
+.subject__list
+  padding-left: 1.2em
+
+  @media (max-width: 599px)
+    margin: 0
+    padding: 0
+    list-style: none
+
+    > li
+      display: inline-block
+
+  [rel="tag"]
+    @media (max-width: 599px)
+      @include tag
+
+.book__tags
+  border-top: 1px solid $border-color
+  clear: both
+  padding: 8px 15px
+  width: 100%
+
+  [rel="tag"]
+    @include tag
+
+  .title
+    display: block
+    font-size: 13px
+
+.subject__tag
+  display: inline-block
 
 @@ _book
-figure class="class1"
-  a href="/books/#{book.id}"
-    img src=img_url(get_isbn(book))
-  figcaption(class="class2")
-    dl
-      dt(class="book_title")
-        - book.main_title.split.each do |word|
-          a href="/books/words/#{normalize_word(word)}" = word
-          = " "
-      dt(class="book_subjects")
-      - book.book_subjects.subject.each do |subject|
-        - subject_color = "%06x" % (subject.id * (0xffffff / subject_count))
-        - subject_count = subject_book_counts[subject]
-        a(
-          href="/books/subjects/#{subject}"
-          title=subject
-          style="font-size: x-small; background-color: ##{subject_color};"
-        )= "%03s" % subject_count
-        = " "
+figure.book(itemscope itemtype="http://schema.org/Book")
+  a.book-cover href="/books/#{book.id}" title=book.main_title
+    img src=img_url(get_isbn(book)) alt=book.main_title
+  figcaption.book-details
+    h2.book__title(itemprop="name")
+      = book.main_title
+    .book__author(itemprop="author")
+      = "by "
       - book.author_books.each do |author_book|
         - author = author_book.author
-        dt(class="book_author")
-          - book_count = author_book_counts[author]
-          - if book_count && book_count > 1
-            a(href="/books/authors/#{author}")= "#{author} (#{book_count})"
-          - else
-            = author
+        - book_count = author_book_counts[author]
+        - if book_count && book_count > 1
+          a(rel="author" href="/books/authors/#{author}")= "#{author} (#{book_count})"
+        - else
+          = author
+    .book__subjects
+      span.subject__title Subject(s):
+      ul.subject__list
+        - book.book_subjects.subject.each do |subject|
+          - subject_color = "%06x" % (subject.id * (0xffffff / subject_count))
+          - subject_count = subject_book_counts[subject]
+          li
+            a.subject__tag(
+              rel="tag"
+              href="/books/subjects/#{subject}"
+              title=subject
+            )
+              | #{subject}
+              span.counter = "%03s" % subject_count
+  .book__tags
+    span.title
+      = "Filter keywords:"
+    - book.main_title.split.each do |word|
+      a rel="tag" href="/books/words/#{normalize_word(word)}"
+        = word
 
 @@ _books
-- books.each do |book|
-  == slim :_book, locals: { book: book }
+ul.books
+  - books.each do |book|
+    li
+      == slim :_book, locals: { book: book }
 
 
 @@ book
@@ -254,7 +399,11 @@ footer
 @@ layout
 html
   head
+    meta charset="utf-8"
+    meta http-equiv="x-ua-compatible" content="ie=edge"
+    meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0, user-scalable=0, width=device-width"
     link href="/index.css" rel="stylesheet" type="text/css"
+    link href="https://fonts.googleapis.com/css?family=Quicksand:500" rel="stylesheet"
     script src="http://www.archive.org/includes/jquery-1.6.1.min.js"
   body
     == slim :_header
