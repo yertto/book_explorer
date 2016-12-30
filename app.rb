@@ -250,6 +250,9 @@ body
   color: $book-details-author-font-color
   margin-top: .5em
 
+  [rel="author"]
+    color: inherit
+
 .book__subjects
   margin-top: 20px
   font-size: 14px
