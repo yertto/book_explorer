@@ -195,7 +195,7 @@ body
 
 .books
   margin: 0
-  padding: 0
+  padding: 7px
   list-style: none
 
   @media (min-width: 600px)
@@ -242,15 +242,21 @@ body
 .book-cover
   width: 100%
 
+  @media (max-width: 599px)
+    background-color: #1f2930
+
   @media (min-width: 600px)
     width: 31.12%
 
   img
-    box-shadow: 0 0 8px rgba(0,0,0,.25)
-    width: 50%
+    box-shadow: 0 0 15px #000
+    width: 100%
+
+    @media (max-width: 599px)
+      max-width: 120px
 
     @media (min-width: 600px)
-      width: 100%
+      box-shadow: 0 0 8px rgba(0,0,0,.25)
 
 .book-details
   @media (min-width: 600px)
