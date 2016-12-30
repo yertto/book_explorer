@@ -174,6 +174,8 @@ body
 
   > li
     display: block
+    margin: 7px
+    max-width: 420px
 
     @media (min-width: 600px)
       flex: 1 50%
@@ -183,7 +185,7 @@ body
   border-radius: 4px
   border: 1px solid $border-color
   display: block
-  margin: 7px
+  margin: 0
   overflow: hidden
 
   @media (max-width: 599px)
@@ -195,9 +197,6 @@ body
     display: table
 
   @media (min-width: 900px)
-    display: inline-block
-    max-width: 420px
-    vertical-align: top
     width: 100%
 
 .book-cover,
@@ -350,16 +349,17 @@ table
 
 
 @@ books
-h1
-  - if params.empty?
-    = "/books"
-  - else
-    a href="/books" = "/books"
-    | /
-    a href="/books/#{association}" = association
-    | /
-    = value
-== slim :_books, locals: { books: books }
+header#page-title
+  h1
+    - if params.empty?
+      = "/books"
+    - else
+      a href="/books" = "/books"
+      | /
+      a href="/books/#{association}" = association
+      | /
+      = value
+main == slim :_books, locals: { books: books }
 
 
 @@ authors
