@@ -175,10 +175,10 @@ body
   > li
     display: block
     margin: 7px
-    max-width: 420px
 
     @media (min-width: 600px)
       flex: 1 50%
+      max-width: 420px
 
 .book
   background-color: #fff
@@ -291,10 +291,10 @@ body
   display: inline-block
 
 @@ _book
-figure.book(itemscope itemtype="http://schema.org/Book")
+.book(itemscope itemtype="http://schema.org/Book")
   a.book-cover href="/books/#{book.id}" title=book.main_title
     img src=img_url(get_isbn(book)) alt=book.main_title
-  figcaption.book-details
+  .book-details
     h2.book__title(itemprop="name")
       = book.main_title
     .book__author(itemprop="author")
