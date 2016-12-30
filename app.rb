@@ -151,8 +151,17 @@ $book-details-author-font-color: #989898
   &:hover
     background-color: darken($border-color, 5%)
 
+html,
+body
+  margin: 0
+  padding: 0
+
 html
+  -moz-osx-font-smoothing: grayscale
+  -webkit-font-smoothing: antialiased
+  -webkit-tap-highlight-color: transparent
   box-sizing: border-box
+  text-size-adjust: 100%
 
 *, *:before, *:after
   box-sizing: inherit
@@ -161,6 +170,28 @@ body
   background-color: #f2f5f7
   color: #434f59
   font-family: Helvetica, Arial, sans-serif
+
+.page-header
+  background-color: #fff
+  height: 50px
+  overflow: hidden
+  padding: 0 15px
+
+  h1
+    display: inline-block
+    font: 600 1.5em Quicksand, sans-serif
+    margin: 0
+    height: 100%
+    vertical-align: middle
+
+    &::before
+      content: ''
+      height: 100%
+      display: inline-block
+      vertical-align: middle
+
+  @media (max-width: 599px)
+    height: 50px
 
 .books
   margin: 0
@@ -234,7 +265,7 @@ body
     text-align: center
 
 .book__title
-  font: 500 1.4em 'Quicksand', sans-serif
+  font: 500 1.4em Quicksand, sans-serif
   margin-bottom: 0
   margin-top: 0
 
@@ -349,7 +380,7 @@ table
 
 
 @@ books
-header#page-title
+header#page-header.page-header
   h1
     - if params.empty?
       = "/books"
