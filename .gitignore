@@ -1,4 +1,4 @@
-.rbenv-vars
+.env
 .sass-cache
 db.sqlite
 skipped_isbn.txt

@@ -7,7 +7,7 @@ gem 'data_mapper'
 # scraper gems
 gem 'mechanize'
 
-# app gems
+# web gems
 gem 'sinatra'
 gem 'slim'
 gem 'sass'

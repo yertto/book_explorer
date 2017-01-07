@@ -1,5 +1,24 @@
 {
   "name": "Book Explorer",
   "description": "Book Explorer - WIP",
-  "repository": "https://github.com/yertto/bookexplorer"
+  "repository": "https://github.com/yertto/bookexplorer",
+  "env": {
+    "CARD_HOST": {
+      "value": "wml.spydus.com",
+    },
+    "CARD_NUMBER": {
+      "value": "",
+    },
+    "CARD_PIN": {
+      "value": "",
+    },
+    "SKIPPED_ISBN": {
+      "value": "",
+    }
+  },
+  "addons": [
+    {
+      "plan": "heroku-postgresql:hobby-dev"
+    }
+  ]
 }

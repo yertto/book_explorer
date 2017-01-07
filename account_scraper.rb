@@ -73,6 +73,7 @@ class SpydusScraper
 
   def first_or_create_book(link, irn = nil)
     book_attributes = book_attributes_from(link, irn)
+    p book_attributes if ENV['DEBUG']
     Book.first_or_new(
       { irn: book_attributes[:irn] },
       book_attributes
@@ -80,7 +81,7 @@ class SpydusScraper
   end
 
   def skipped_isbn
-    @skipped_isbn ||= File.read('skipped_isbn.txt').split.map(&:strip)
+    @skipped_isbn ||= (ENV['SKIPPED_ISBN'] || "").split(",")
   end
 
   def scrape(page)
@@ -93,7 +94,7 @@ class SpydusScraper
           print "\e[31m"
         else
           print "\e[32m" if book.new?
-          book.save!
+          book.save! rescue nil
         end
         puts "#{book.isbn} : #{book.main_title}\e[m"
       end

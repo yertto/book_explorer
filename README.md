@@ -7,12 +7,18 @@ bundle
 
 ## Seeding
 ```
-bundle exec ./scraper.rb
+./scraper.rb
+./account_scraper.rb
 ```
 
 ## Running
+try one of these...
 ```
-bundle exec shotgun app.rb
+shotgun
+./web.rb
+rackup
+heroku local
+foreman
 ```
 
 ## Deploying to Heroku
