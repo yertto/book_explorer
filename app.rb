@@ -102,7 +102,8 @@ end
 def subject_book_counts
   @subject_book_counts ||= my_books.subjects.all(order: :value) #    .preload(Subject.book_subjects)
     .inject({}) { |h, subject|
-      h.update(subject => subject.book_subjects.size)
+      # h.update(subject => subject.book_subjects.size)
+      h.update(subject => subject.books.size)
     }
     .reject { |k, v| v < MIN_BOOKS_WITH_SUBJECT }
     .sort_by { |k, v| [0 - v, k] }

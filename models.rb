@@ -17,6 +17,8 @@ class Book
   property :main_title          , String , length: 255
   property :isbn                , String
 
+  property :irn                 , String
+
   property :edition             , String
   property :imprint             , String , length: 255
   property :collation           , String , length: 255
@@ -25,6 +27,7 @@ class Book
   property :contents            , Text
   property :credits             , String , length: 255
   property :performers          , String , length: 255
+  property :access_restrictions , String , length: 255
   property :linking_notes       , String , length: 255
   property :audience            , String , length: 255
   property :restrictions_on_use , String , length: 255
@@ -66,9 +69,9 @@ class Book
     super(value.join)
   end
 
-#  def isbn
-#    img_url ? img_url[/isbn=([^\/]+)/, 1] : super
-#  end
+  def isbn
+    img_url ? img_url[/isbn=([^\/]+)/, 1] : super
+  end
 end
 
 class Author
