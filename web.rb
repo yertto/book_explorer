@@ -92,7 +92,12 @@ end
 def author_book_counts
   @author_book_counts ||= my_books.authors.all(order: :value) #    .preload(my_books)
     .inject({}) { |h, author|
-      h.update(author => author.author_books.size)
+      if ENV['USING_SQLITE']
+        count = 1
+      else
+        count = author.author_books.size
+      end
+      h.update(author => count)
     }
     .reject { |k, v| v < MIN_BOOKS_WITH_AUTHOR }
     .sort_by { |k, v| [0 - v, k] }
@@ -343,7 +348,8 @@ body
         - if book_count && book_count > 1
           a(rel="author" href="/books/authors/#{author}")= "#{author} (#{book_count})"
         - else
-          = author
+          a(rel="author" href="/books/authors/#{author}")= author
+        |&nbsp;
     .book__subjects
       span.subject__title Subject(s):
       ul.subject__list
@@ -404,10 +410,16 @@ main == slim :_books, locals: { books: books }
 h1
   a href="/books" = "/books"
   | /authors
-- author_book_counts.each do |author, count|
-  h2
-    a(href="/books/authors/#{author}")= "#{author} (#{count})"
-  == slim :_books, locals: { books: books(authors: author) }
+- if ENV['USING_SQLITE']
+  - my_books.authors(order: :value).each do |author|
+    h2
+      a(href="/books/authors/#{author}")= author
+    == slim :_books, locals: { books: books(authors: author) }
+- else
+  - author_book_counts.each do |author, count|
+    h2
+      a(href="/books/authors/#{author}")= "#{author} (#{count})"
+    == slim :_books, locals: { books: books(authors: author) }
 
 
 @@ subjects
