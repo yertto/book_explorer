@@ -14,7 +14,7 @@ get '/' do
 end
 
 get '/books' do
-  slim :books, locals: { books: books }
+  slim :books, locals: { books: books, count: books.count }
 end
 
 get '/books/authors' do
@@ -30,10 +30,12 @@ get '/books/words' do
 end
 
 get '/books/:association/:value' do |association, value|
+  books = books(association => value)
   slim :books, locals: {
     association: association,
     value: value,
-    books: books(association => value)
+    count: books.count,
+    books: books
   }
 end
 
@@ -61,7 +63,11 @@ def books(opts = {})
     if association == 'words'
       current_books_by_word(value)
     else
-      my_books.send(association).first(value: value).books(order: :main_title)
+      if (parent = my_books.send(association).first(value: value))
+        parent.books(order: :main_title)
+      else
+        []
+      end
     end
   end
 end
@@ -271,6 +277,7 @@ body
   p
     color: $book-details-paragraph-font-color
 
+
 .book__title,
 .book__author
   @media (max-width: 599px)
@@ -403,13 +410,19 @@ header#page-header.page-header
       a href="/books/#{association}" = association
       | /
       = value
+    = " (#{count} books)"
 main == slim :_books, locals: { books: books }
 
 
+@@ _association_header
+header#page-header.page-header
+  h1
+    a href="/books" = "/books"
+    | /#{association}
+
+
 @@ authors
-h1
-  a href="/books" = "/books"
-  | /authors
+== slim :_association_header, locals: { association: "authors" }
 - if ENV['USING_SQLITE']
   - my_books.authors(order: :value).each do |author|
     h2
@@ -418,28 +431,32 @@ h1
 - else
   - author_book_counts.each do |author, count|
     h2
-      a(href="/books/authors/#{author}")= "#{author} (#{count})"
+      a(href="/books/authors/#{author}")= "#{author} (#{count} books)"
     == slim :_books, locals: { books: books(authors: author) }
 
 
 @@ subjects
-h1
-  a href="/books" = "/books"
-  | /subjects
+== slim :_association_header, locals: { association: "subjects" }
 - subject_book_counts.each do |subject, count|
   h2
-    a(href="/books?subjects=#{subject}")= "#{subject} (#{count})"
+    a(href="/books/subjects/=#{subject}")= "#{subject} (#{count} books)"
   == slim :_books, locals: { books: books(subjects: subject) }
 
 
+@@ prc_year_levels
+== slim :_association_header, locals: { association: "prc_year_levels" }
+- prc_year_level_book_counts.each do |prc_year_level, count|
+  h2
+    a(href="/books/prc_year_levels/#{prc_year_level}")= "#{prc_year_level} (#{count} books)"
+  == slim :_books, locals: { books: books(prc_year_levels: prc_year_level) }
+
+
 @@ words
-h1
-  a href="/books" = "/books"
-  | /words
-  - word_book_counts.each do |word, count|
-    h2
-      a(href="/books/words/#{word}")= "#{word} (#{count})"
-    == slim :_books, locals: { books: current_books_by_word(word) }
+== slim :_association_header, locals: { association: "words" }
+- word_book_counts.each do |word, count|
+  h2
+    a(href="/books/words/#{word}")= "#{word} (#{count} books)"
+  == slim :_books, locals: { books: current_books_by_word(word) }
 
 
 @@ _header
