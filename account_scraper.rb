@@ -90,6 +90,7 @@ class SpydusScraper
           print "\e[31m"
         else
           print "\e[32m" if book.new?
+          book.set_prc_year_levels
           book.save! rescue nil
         end
         puts "#{book.isbn} : #{book.main_title}\e[m"

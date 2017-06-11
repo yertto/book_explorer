@@ -25,6 +25,10 @@ get '/books/subjects' do
   slim :subjects
 end
 
+get '/books/prc_year_levels' do
+  slim :prc_year_levels
+end
+
 get '/books/words' do
   slim :words
 end
@@ -117,6 +121,16 @@ def subject_book_counts
       h.update(subject => subject.books.size)
     }
     .reject { |k, v| v < MIN_BOOKS_WITH_SUBJECT }
+    .sort_by { |k, v| [0 - v, k] }
+    .to_h
+end
+
+def prc_year_level_book_counts
+  @prc_year_level_book_counts ||= my_books.prc_year_levels.all(order: :value) #    .preload(Subject.book_subjects)
+    .inject({}) { |h, prc_year_level|
+      # h.update(prc_year_level => prc_year_level.book_prc_year_levels.size)
+      h.update(prc_year_level => prc_year_level.books.size)
+    }
     .sort_by { |k, v| [0 - v, k] }
     .to_h
 end
@@ -324,6 +338,7 @@ body
     @media (max-width: 599px)
       @include tag
 
+.book__prc_year_levels,
 .book__tags
   border-top: 1px solid $border-color
   clear: both
@@ -342,8 +357,12 @@ body
 
 @@ _book
 .book(itemscope itemtype="http://schema.org/Book")
-  a.book-cover href="/books/#{book.id}" title=book.main_title
-    img src=img_url(get_isbn(book)) alt=book.main_title
+  .book-cover
+    a href="/books/#{book.id}" title=book.main_title
+      img src=img_url(get_isbn(book)) alt=book.main_title
+    - if !book.prc_year_levels.empty?
+      a href="/books/prc_year_levels"
+        img src="http://www.malvernps.vic.edu.au/wp-content/uploads/prchomepage.gif"
   .book-details
     h2.book__title(itemprop="name")
       = book.main_title
@@ -371,6 +390,13 @@ body
             )
               | #{subject}
               span.counter = "%03s" % subject_count
+  - if !book.prc_year_levels.empty?
+    .book__prc_year_levels
+      span.title
+        = "Premier's Reading Challenge - Year Levels:"
+      - book.prc_year_levels.each do |prc_year_level|
+        a(rel="tag" href="/books/prc_year_levels/#{prc_year_level}")= prc_year_level
+        |&nbsp;
   .book__tags
     span.title
       = "Filter keywords:"

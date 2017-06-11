@@ -4,6 +4,35 @@ DataMapper::Logger.new(STDOUT, :debug) if ENV['DEBUG']
 
 DataMapper.setup(:default, ENV.fetch('DATABASE_URL', 'sqlite:db.sqlite'))
 
+class PremiersReadingChallengeList
+
+  class << self
+    include Enumerable
+    extend Forwardable
+
+    def [](isbn)
+      items[isbn.gsub(/-/, '')]
+    end
+
+    def items
+      @items ||= begin
+        CSV.foreach("premiers_reading_challenge-2017.tsv", col_sep: "\t", headers: true).inject({}) do |items, row|
+          if (isbn = row["ISBN"])
+            items[isbn.gsub(/-/, '')] = {
+              author: row["Author"],
+              title: row["Book Title"],
+              isbn: isbn,
+              year_levels: row["Year Level"]
+            }
+          end
+          items
+        end
+      end
+    end
+  end
+end
+
+
 class Book
   include DataMapper::Resource
 
@@ -11,6 +40,8 @@ class Book
 
   has n, :authors  , through: Resource
   has n, :subjects , through: Resource
+
+  has n, :prc_year_levels , through: Resource
 
   property :id                  , Serial
 
@@ -54,6 +85,19 @@ class Book
 
   property :created_at          , DateTime
   property :updated_at          , DateTime
+
+  # TODO: get this hook working
+  before :save, :set_prc_year_levels
+
+  def set_prc_year_levels
+    if (prc_entry = PremiersReadingChallengeList[self.isbn])
+      if (year_levels = prc_entry[:year_levels])
+        self.prc_year_levels = year_levels.split(", ").map do |v|
+          PrcYearLevel.first_or_create({ value: v })
+        end
+      end
+    end
+  end
 
   def main_title=(values)
     super values.first
@@ -120,6 +164,23 @@ class Subject
   end
 end
 
+class PrcYearLevel
+  include DataMapper::Resource
+
+  property :id    , Serial
+  property :value , String , length: 255, key: true
+
+  has n, :books, through: Resource
+
+  property :created_at , DateTime
+  property :updated_at , DateTime
+
+  alias :to_s :value
+
+  def <=>(other)
+    value <=> other.value
+  end
+end
 
 # Blow everything away while developing ...
 # DataMapper.finalize.auto_migrate!
