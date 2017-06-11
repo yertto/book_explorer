@@ -7,6 +7,8 @@ DataMapper.setup(:default, ENV.fetch('DATABASE_URL', 'sqlite:db.sqlite'))
 class Book
   include DataMapper::Resource
 
+  SKIPPED_ISBN = (ENV['SKIPPED_ISBN'] || "").split(",")
+
   has n, :authors  , through: Resource
   has n, :subjects , through: Resource
 
@@ -71,6 +73,14 @@ class Book
 
   def isbn
     img_url ? img_url[/isbn=([^\/]+)/, 1] : super
+  end
+
+  def sound_recording?
+    main_title.end_with?("[sound recording]")
+  end
+
+  def skip?
+    sound_recording? || isbn.nil? || SKIPPED_ISBN.include?(isbn)
   end
 end
 

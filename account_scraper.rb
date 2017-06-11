@@ -80,17 +80,13 @@ class SpydusScraper
     )
   end
 
-  def skipped_isbn
-    @skipped_isbn ||= (ENV['SKIPPED_ISBN'] || "").split(",")
-  end
-
   def scrape(page)
     begin
 #      page.links_with(href: %r{/FULL/OPAC/ALLENQ/}).each do |link|
       page.links_with(href: /.*IRN\(\d+\).*/).each do |link|
         irn = link.href[/IRN\((\d+)\)/, 1]
         book = first_or_create_book(link, irn)
-        if book.isbn.nil? || skipped_isbn.include?(book.isbn)
+        if book.skip?
           print "\e[31m"
         else
           print "\e[32m" if book.new?
