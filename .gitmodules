@@ -1,0 +1,3 @@
+[submodule "premiers_reading_challenge"]
+	path = premiers_reading_challenge
+	url = https://github.com/yertto/premiers_reading_challenge.git
