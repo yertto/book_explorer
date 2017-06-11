@@ -43,3 +43,4 @@ heroku run bundle exec ./scraper.rb
   instead of
     `DataMapper.finalize.auto_upgrade!`
   to blow the database away completely.
+* When deploying to heroku it doesn't seem to be automatically creating the postgres database - perhaps `app.json` needs updating?
