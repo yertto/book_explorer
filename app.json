@@ -17,8 +17,7 @@
     }
   },
   "addons": [
-    {
-      "plan": "heroku-postgresql:hobby-dev"
-    }
+    "scheduler:standard",
+    "heroku-postgresql:hobby-dev"
   ]
 }
