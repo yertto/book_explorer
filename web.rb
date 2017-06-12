@@ -544,6 +544,10 @@ header#page-header.page-header
 
 @@ _footer
 footer
+  small
+    - if (git_sha = ENV['SOURCE_VERSION'] || `git describe --always --tags`)
+      | github://
+      a href="https://github.com/yertto/bookexplorer/compare/#{git_sha}...master"= git_sha
 
 
 @@ layout
