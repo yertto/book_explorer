@@ -42,6 +42,7 @@ class Book
   has n, :subjects , through: Resource
 
   has n, :prc_year_levels , through: Resource
+  has n, :loans
 
   property :id                  , Serial
 
@@ -126,6 +127,10 @@ class Book
   def skip?
     sound_recording? || isbn.nil? || SKIPPED_ISBN.include?(isbn)
   end
+
+  def to_s
+    "#{isbn} : #{main_title}#{loans.empty? ? "" : " (loans: #{loans.count})"}"
+  end
 end
 
 class Author
@@ -181,6 +186,20 @@ class PrcYearLevel
     value <=> other.value
   end
 end
+
+class Loan
+  include DataMapper::Resource
+
+  belongs_to :book
+
+  property :id , Serial
+
+  property :issued , Date
+  property :returned , Date
+
+  timestamps :at
+end
+
 
 # Blow everything away while developing ...
 # DataMapper.finalize.auto_migrate!

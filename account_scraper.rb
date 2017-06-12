@@ -87,11 +87,12 @@ class SpydusScraper
         irn = link.href[/IRN\((\d+)\)/, 1]
         book = first_or_create_book(link, irn)
         if book.skip?
-          print "\e[31m"
+          print "\e[33m"
         else
           print "\e[32m" if book.new?
           book.set_prc_year_levels
-          book.save! rescue nil
+          yield book, link if block_given?
+          print "#{book.save ? "✔" : "✕"} "
         end
         puts "#{book.isbn} : #{book.main_title}\e[m"
       end
@@ -100,7 +101,10 @@ class SpydusScraper
 
   def call
     scrape(current_loans)
-    scrape(previous_loans)
+    scrape(previous_loans) do |book, link|
+      issued, returned = link.node.parent.parent.children[3..4].map(&:text)
+      book.loans.first_or_new(issued: issued, returned: returned)
+    end
   end
 end
 

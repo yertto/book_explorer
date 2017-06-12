@@ -29,6 +29,10 @@ get '/books/prc_year_levels' do
   slim :prc_year_levels
 end
 
+get '/books/loans' do
+  slim :loans
+end
+
 get '/books/words' do
   slim :words
 end
@@ -64,8 +68,11 @@ def books(opts = {})
 #      .preload(my_books.authors, my_books.subjects)
   else
     association, value = *opts.flatten
-    if association == 'words'
+    case association.to_s
+    when 'words'
       current_books_by_word(value)
+    when 'loans'
+      current_books_by_loan_issued(value)
     else
       if (parent = my_books.send(association).first(value: value))
         parent.books(order: :main_title)
@@ -81,6 +88,10 @@ def current_books_by_word(value)
     .inject(my_books.all(:main_title.like => '%% %s %%' % value, order: :main_title)) { |collection, pat|
       collection | my_books.all(:main_title.like => pat % value, order: :main_title)
     }
+end
+
+def current_books_by_loan_issued(value)
+  my_books.loans(issued: value).map(&:book)
 end
 
 def get_isbn(book)
@@ -132,6 +143,16 @@ def prc_year_level_book_counts
       h.update(prc_year_level => prc_year_level.books.size)
     }
     .sort_by { |k, v| [0 - v, k] }
+    .to_h
+end
+
+def loan_book_counts
+  @loan_book_counts ||= my_books.loans.all(order: :issued)
+    .inject({}) { |h, loan|
+      h[loan.issued] ||= 0
+      h[loan.issued] += 1
+      h
+    }
     .to_h
 end
 
@@ -339,7 +360,8 @@ body
       @include tag
 
 .book__prc_year_levels,
-.book__tags
+.book__tags,
+.book__loans
   border-top: 1px solid $border-color
   clear: both
   padding: 8px 15px
@@ -403,6 +425,16 @@ body
     - book.main_title.split.each do |word|
       a rel="tag" href="/books/words/#{normalize_word(word)}"
         = word
+  - if !book.loans.empty?
+    .book__loans
+      span.title
+        a(href="/books/loans")= "Loans:"
+      ol
+        - book.loans(order: :issued).each do |loan|
+          li
+            a(href="/books/loans/#{loan.issued}")= loan.issued
+            small= " (Returned #{loan.returned})"
+
 
 @@ _books
 ul.books
@@ -475,6 +507,14 @@ header#page-header.page-header
   h2
     a(href="/books/prc_year_levels/#{prc_year_level}")= "#{prc_year_level} (#{count} books)"
   == slim :_books, locals: { books: books(prc_year_levels: prc_year_level) }
+
+
+@@ loans
+== slim :_association_header, locals: { association: "loans" }
+- loan_book_counts.each do |loan_issued, count|
+  h2
+    a(href="/books/loans/#{loan_issued}")= "#{loan_issued} (#{count} books)"
+  == slim :_books, locals: { books: books(loans: { issued: loan_issued }) }
 
 
 @@ words
