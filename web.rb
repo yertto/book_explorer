@@ -51,6 +51,18 @@ get '/books/:id' do |id|
   slim :book, locals: { book: Book.get(id) }
 end
 
+post '/skip_isbn' do
+  isbn = params[:isbn]
+  # TODO: simpler way?
+  if (skipped_isbn = SkippedIsbn.first(value: isbn))
+    skipped_isbn.destroy!
+  else
+    SkippedIsbn.create(value: isbn)
+    Book.first(isbn: isbn).destroy
+  end
+  redirect to('/books')
+end
+
 get '/index.css' do
   # cache_control :public, max_age: 600
   sass :style
@@ -59,7 +71,7 @@ end
 
 def my_books
   # TODO - scope books to some kind of user
-  Book.all
+  Book.not_skipped
 end
 
 def books(opts = {})
@@ -448,6 +460,9 @@ h1
   | /
   = book.main_title
 == slim :_book, locals: { book: book }
+form action="/skip_isbn" method="POST"
+  input type="hidden" name="isbn" value=book.isbn
+  input type="submit" value="[#{SkippedIsbn.first(value: book.isbn) ? "unskip" : "skip"}]"
 table
   - Book.properties.map(&:name).each do |prop|
     tr
@@ -496,7 +511,7 @@ header#page-header.page-header
 == slim :_association_header, locals: { association: "subjects" }
 - subject_book_counts.each do |subject, count|
   h2
-    a(href="/books/subjects/=#{subject}")= "#{subject} (#{count} books)"
+    a(href="/books/subjects/#{subject}")= "#{subject} (#{count} books)"
   == slim :_books, locals: { books: books(subjects: subject) }
 
 

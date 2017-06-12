@@ -32,10 +32,25 @@ class PremiersReadingChallengeList
   end
 end
 
-class Book
+class SkippedIsbn
   include DataMapper::Resource
 
-  SKIPPED_ISBN = (ENV['SKIPPED_ISBN'] || "").split(",")
+  property :id    , Serial
+  property :value , String
+
+  timestamps :at
+
+  class << self
+    def seed
+      (ENV['SKIPPED_ISBN'] || "").split(",").each do |value|
+        first_or_create(value: value)
+      end
+    end
+  end
+end
+
+class Book
+  include DataMapper::Resource
 
   has n, :authors  , through: Resource
   has n, :subjects , through: Resource
@@ -85,8 +100,15 @@ class Book
 
   timestamps :at
 
-  # TODO: get this hook working
-  before :save, :set_prc_year_levels
+  # TODO: get these hooks working
+  # before :save, :set_prc_year_levels
+  # before :initialize, :fix_isbn
+
+  class << self
+    def not_skipped
+      all(:isbn.not => SkippedIsbn.all.map(&:value))
+    end
+  end
 
   def set_prc_year_levels
     if (prc_entry = PremiersReadingChallengeList[self.isbn])
@@ -114,8 +136,13 @@ class Book
     super(value.join)
   end
 
+  def fix_isbn
+    @isbn = img_url[/isbn=([^\/]+)/, 1] if img_url
+  end
+
   def isbn
-    img_url ? img_url[/isbn=([^\/]+)/, 1] : super
+    fix_isbn
+    super
   end
 
   def sound_recording?
@@ -123,7 +150,7 @@ class Book
   end
 
   def skip?
-    sound_recording? || isbn.nil? || SKIPPED_ISBN.include?(isbn)
+    sound_recording? || isbn.nil? || SkippedIsbn.first(value: isbn)
   end
 
   def to_s
@@ -199,3 +226,4 @@ end
 # Blow everything away while developing ...
 # DataMapper.finalize.auto_migrate!
 DataMapper.finalize.auto_upgrade!
+SkippedIsbn.seed
