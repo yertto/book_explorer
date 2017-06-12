@@ -32,7 +32,6 @@ class PremiersReadingChallengeList
   end
 end
 
-
 class Book
   include DataMapper::Resource
 
@@ -84,8 +83,7 @@ class Book
   property :other_editions      , String , length: 255
   property :similar_titles      , String , length: 255
 
-  property :created_at          , DateTime
-  property :updated_at          , DateTime
+  timestamps :at
 
   # TODO: get this hook working
   before :save, :set_prc_year_levels
@@ -141,8 +139,7 @@ class Author
 
   has n, :books, through: Resource
 
-  property :created_at , DateTime
-  property :updated_at , DateTime
+  timestamps :at
 
   alias :to_s :value
 
@@ -157,8 +154,7 @@ class Subject
   property :id         , Serial
   property :value      , String , length: 255, key: true
 
-  property :created_at , DateTime
-  property :updated_at , DateTime
+  timestamps :at
 
   has n, :books, through: Resource
 
@@ -177,8 +173,7 @@ class PrcYearLevel
 
   has n, :books, through: Resource
 
-  property :created_at , DateTime
-  property :updated_at , DateTime
+  timestamps :at
 
   alias :to_s :value
 
