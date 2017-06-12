@@ -91,7 +91,7 @@ def current_books_by_word(value)
 end
 
 def current_books_by_loan_issued(value)
-  my_books.loans(issued: value).map(&:book)
+  my_books.loans(issued: value).map(&:book).sort_by(&:main_title)
 end
 
 def get_isbn(book)
@@ -137,7 +137,7 @@ def subject_book_counts
 end
 
 def prc_year_level_book_counts
-  @prc_year_level_book_counts ||= my_books.prc_year_levels.all(order: :value) #    .preload(Subject.book_subjects)
+  @prc_year_level_book_counts ||= my_books.prc_year_levels.all(order: :value)
     .inject({}) { |h, prc_year_level|
       # h.update(prc_year_level => prc_year_level.book_prc_year_levels.size)
       h.update(prc_year_level => prc_year_level.books.size)
@@ -402,7 +402,6 @@ body
       span.subject__title Subject(s):
       ul.subject__list
         - book.book_subjects.subject.each do |subject|
-          - subject_color = "%06x" % (subject.id * (0xffffff / subject_count))
           - subject_count = subject_book_counts[subject]
           li
             a.subject__tag(
@@ -421,14 +420,14 @@ body
         |&nbsp;
   .book__tags
     span.title
-      = "Filter keywords:"
+      a(href="/books/words")= "Filter keywords:"
     - book.main_title.split.each do |word|
       a rel="tag" href="/books/words/#{normalize_word(word)}"
         = word
   - if !book.loans.empty?
     .book__loans
       span.title
-        a(href="/books/loans")= "Loans:"
+        a(href="/books/loans")= "Loan(s):"
       ol
         - book.loans(order: :issued).each do |loan|
           li

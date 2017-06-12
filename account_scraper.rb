@@ -87,14 +87,15 @@ class SpydusScraper
         irn = link.href[/IRN\((\d+)\)/, 1]
         book = first_or_create_book(link, irn)
         if book.skip?
-          print "\e[33m"
+          print "\e[33m[skip] "
         else
           print "\e[32m" if book.new?
           book.set_prc_year_levels
           yield book, link if block_given?
           print "#{book.save ? "✔" : "✕"} "
         end
-        puts "#{book.isbn} : #{book.main_title}\e[m"
+        puts book
+        print "\e[m"
       end
     end while (next_page = page.link_with(text: 'Next')) && page = next_page.click
   end
