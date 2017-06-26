@@ -410,19 +410,6 @@ body
         - else
           a(rel="author" href="/books/authors/#{author}")= author
         |&nbsp;
-    .book__subjects
-      span.subject__title Subject(s):
-      ul.subject__list
-        - book.book_subjects.subject.each do |subject|
-          - subject_count = subject_book_counts[subject]
-          li
-            a.subject__tag(
-              rel="tag"
-              href="/books/subjects/#{subject}"
-              title=subject
-            )
-              | #{subject}
-              span.counter = "%03s" % subject_count
   - if !book.prc_year_levels.empty?
     .book__prc_year_levels
       span.title
