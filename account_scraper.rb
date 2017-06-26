@@ -112,10 +112,11 @@ class SpydusScraper
   def call
     last_scraped_at = Scrape.last&.created_at
     if last_scraped_at.nil? || last_scraped_at < (DateTime.now - ONE_DAY)
+      puts "Scraping...  (Last scraped at: #{last_scraped_at})"
       do_scrape
       Scrape.create
     else
-      puts "Skipping scrape.  (Last scraped at: #{last_scraped_at}"
+      puts "Skipping scrape.  (Last scraped at: #{last_scraped_at})"
     end
   end
 end
