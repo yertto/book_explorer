@@ -64,7 +64,7 @@ post '/skip_isbn' do
 end
 
 get '/index.css' do
-  # cache_control :public, max_age: 600
+  cache_control :public, max_age: 600
   sass :style
 end
 
