@@ -4,6 +4,7 @@ require './models'
 
 class SpydusScraper
   HOME_URL_PAT="https://%s/cgi-bin/spydus.exe/MSGTRN/OPAC/HOME"
+  ONE_DAY = 60*60*24
 
   attr_reader :card
 
@@ -100,11 +101,21 @@ class SpydusScraper
     end while (next_page = page.link_with(text: 'Next')) && page = next_page.click
   end
 
-  def call
+  def do_scrape
     scrape(current_loans)
     scrape(previous_loans) do |book, link|
       issued, returned = link.node.parent.parent.children[3..4].map(&:text)
       book.loans.first_or_new(issued: issued, returned: returned)
+    end
+  end
+
+  def call
+    last_scraped_at = Scrape.last&.created_at
+    if last_scraped_at.nil? || last_scraped_at < (DateTime.now - ONE_DAY)
+      do_scrape
+      Scrape.create
+    else
+      puts "Skipping scrape.  (Last scraped at: #{last_scraped_at}"
     end
   end
 end
@@ -116,5 +127,6 @@ if __FILE__ == $0
     number: ENV.fetch('CARD_NUMBER'),
     pin: ENV.fetch('CARD_PIN')
   )
+
   SpydusScraper.new(card).call
 end

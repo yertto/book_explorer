@@ -32,6 +32,13 @@ class PremiersReadingChallengeList
   end
 end
 
+class Scrape
+  include DataMapper::Resource
+
+  property :id, Serial
+  timestamps :created_at
+end
+
 class SkippedIsbn
   include DataMapper::Resource
 
