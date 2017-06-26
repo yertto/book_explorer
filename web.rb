@@ -187,6 +187,9 @@ def subject_count
   @subject_count ||= Subject.count
 end
 
+def git_sha
+  ENV['SOURCE_VERSION'] or `git describe --always --tags` rescue nil
+end
 
 __END__
 
@@ -532,7 +535,7 @@ header#page-header.page-header
 @@ _footer
 footer
   small
-    - if (git_sha = ENV['SOURCE_VERSION'] || `git describe --always --tags`)
+    - if git_sha
       | github://
       a href="https://github.com/yertto/bookexplorer/compare/#{git_sha}...master"= git_sha
 
