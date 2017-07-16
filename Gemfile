@@ -12,6 +12,9 @@ gem 'sinatra'
 gem 'slim'
 gem 'sass'
 
+# monitoring gems
+gem 'newrelic_rpm'
+
 group :production do
   gem 'dm-postgres-adapter'
 end

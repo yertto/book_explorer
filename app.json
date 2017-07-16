@@ -18,6 +18,9 @@
   },
   "addons": [
     "heroku-postgresql:hobby-dev",
+    "iptoearth:free",
+    "memcachier:developer",
+    "newrelic:wayne",
     "papertrail:choklad",
     "scheduler:standard"
   ]

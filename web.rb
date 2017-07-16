@@ -1,6 +1,7 @@
 #!/usr/bin/env ruby
 require 'sinatra'
 require 'sass'
+require 'newrelic_rpm'
 
 require './models'
 
