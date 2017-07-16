@@ -17,7 +17,8 @@
     }
   },
   "addons": [
-    "scheduler:standard",
-    "heroku-postgresql:hobby-dev"
+    "heroku-postgresql:hobby-dev",
+    "papertrail:choklad",
+    "scheduler:standard"
   ]
 }
