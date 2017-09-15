@@ -23,4 +23,5 @@ group :development, :test do
   gem 'dm-sqlite-adapter'
   gem 'shotgun'
   gem 'pry'
+  gem 'terminal-table'
 end
