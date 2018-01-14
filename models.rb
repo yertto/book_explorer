@@ -155,12 +155,21 @@ class Book
     super
   end
 
+  def video_recording?
+    main_title.end_with?("[video recording]") ||
+      main_title.end_with?("[videodis]") ||
+      collation =~ /video/
+  end
+
   def sound_recording?
     main_title.end_with?("[sound recording]")
   end
 
   def skip?
-    sound_recording? || isbn.nil? || SkippedIsbn.first(value: isbn)
+    video_recording? ||
+      sound_recording? ||
+      isbn.nil? ||
+      SkippedIsbn.first(value: isbn)
   end
 
   def to_s
