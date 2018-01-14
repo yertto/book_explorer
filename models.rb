@@ -162,7 +162,8 @@ class Book
   end
 
   def sound_recording?
-    main_title.end_with?("[sound recording]")
+    main_title.end_with?("[sound recording]") ||
+      collation =~ /audio/
   end
 
   def skip?
