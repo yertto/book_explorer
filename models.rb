@@ -2,7 +2,8 @@ require 'data_mapper'
 
 DataMapper::Logger.new(STDOUT, :debug) if ENV['DEBUG']
 
-DataMapper.setup(:default, ENV.fetch('DATABASE_URL', 'sqlite:db.sqlite'))
+# DataMapper.setup(:default, ENV.fetch('DATABASE_URL', 'sqlite:db.sqlite'))
+DataMapper.setup(:default, ENV.fetch('JAWSDB_URL', 'sqlite:db.sqlite'))
 
 class PremiersReadingChallengeList
 

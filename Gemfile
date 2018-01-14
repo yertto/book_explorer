@@ -16,7 +16,8 @@ gem 'sass'
 gem 'newrelic_rpm'
 
 group :production do
-  gem 'dm-postgres-adapter'
+#  gem 'dm-postgres-adapter'
+  gem 'dm-mysql-adapter'
 end
 
 group :development, :test do
