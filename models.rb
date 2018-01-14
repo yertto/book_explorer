@@ -105,6 +105,7 @@ class Book
   property :more_information    , String , length: 255
   property :other_editions      , String , length: 255
   property :similar_titles      , String , length: 255
+  property :citations           , String , length: 255
 
   timestamps :at
 
