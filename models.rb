@@ -244,6 +244,6 @@ end
 
 
 # Blow everything away while developing ...
-# DataMapper.finalize.auto_migrate!
-DataMapper.finalize.auto_upgrade!
+DataMapper.finalize.auto_migrate!
+# DataMapper.finalize.auto_upgrade!
 SkippedIsbn.seed
