@@ -107,6 +107,7 @@ class Book
   property :similar_titles      , String , length: 255
   property :citations           , String , length: 255
   property :biography_history   , String , length: 255
+  property :list_saved          , Boolean
 
   timestamps :at
 
@@ -174,7 +175,7 @@ class Book
   end
 
   def to_s
-    "#{isbn} : #{main_title}#{loans.empty? ? "" : " (loans: #{loans.count})"}"
+    "#{isbn} : #{main_title}#{loans.empty? ? "" : " (loans: #{loans.count})"}#{list_saved? ? " [S]" : ""}"
   end
 end
 

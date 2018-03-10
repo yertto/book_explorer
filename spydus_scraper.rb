@@ -74,8 +74,8 @@ class SpydusScraper
       book_attributes[:img_url] = img.src
     end
 
+    book_attributes[:list_saved] = !book_page.search('//span[text()="record saved"]').empty?
     book_attributes[:irn] = irn
-
     book_attributes
   end
 
@@ -85,7 +85,9 @@ class SpydusScraper
     Book.first_or_new(
       { irn: book_attributes[:irn] },
       book_attributes
-    )
+    ).tap { |book|
+      book[:list_saved] = book_attributes[:list_saved]
+    }
   end
 
   def scrape(page)

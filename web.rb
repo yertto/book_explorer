@@ -30,6 +30,10 @@ get '/books/prc_year_levels' do
   slim :prc_year_levels
 end
 
+get '/books/list_saved' do
+  slim :list_saved
+end
+
 get '/books/loans' do
   slim :loans
 end
@@ -512,6 +516,10 @@ header#page-header.page-header
   h2
     a(href="/books/prc_year_levels/#{prc_year_level}")= "#{prc_year_level} (#{count} books)"
   == slim :_books, locals: { books: books(prc_year_levels: prc_year_level) }
+
+
+@@ list_saved
+== slim :_books, locals: { books: my_books.all(list_saved: true) }
 
 
 @@ loans
