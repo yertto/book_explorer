@@ -107,6 +107,7 @@ class Book
   property :similar_titles      , String , length: 255
   property :citations           , String , length: 255
   property :biography_history   , String , length: 255
+  property :related_title       , String , length: 255
   property :list_saved          , Boolean
 
   timestamps :at
