@@ -193,7 +193,7 @@ def subject_count
 end
 
 def git_sha
-  ENV['SOURCE_VERSION'] or `git describe --always --tags` rescue nil
+  ENV['HEROKU_SLUG_COMMIT']
 end
 
 __END__
