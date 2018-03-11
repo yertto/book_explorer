@@ -408,7 +408,8 @@ body
 .subject__tag
   display: inline-block
 
-@@ _book
+
+@@ _book_short
 .book(itemscope itemtype="http://schema.org/Book")
   .book-cover
     a href="/books/#{book.id}" title=book.main_title
@@ -429,6 +430,11 @@ body
         - else
           a(rel="author" href="/books/authors/#{author}")= author
         |&nbsp;
+== yield if block_given?
+
+
+@@ _book
+== slim(:_book_short, locals: { book: book }) do
   - if !book.prc_year_levels.empty?
     .book__prc_year_levels
       span.title
@@ -460,6 +466,13 @@ ul.books
       == slim :_book, locals: { book: book }
 
 
+@@ _books_short
+ul.books
+  - books.each do |book|
+    li
+      == slim :_book_short, locals: { book: book }
+
+
 @@ book
 h1
   a href="/books" = "/books"
@@ -489,7 +502,7 @@ header#page-header.page-header
       | /
       = value
     = " (#{count} books)"
-main == slim :_books, locals: { books: books }
+main == slim (params.empty? ? :_books_short : :_books), locals: { books: books }
 
 
 @@ _association_header
@@ -505,28 +518,28 @@ header#page-header.page-header
   - my_books.authors(order: :value).each do |author|
     h2
       a(href="/books/authors/#{author}")= author
-    == slim :_books, locals: { books: books(authors: author) }
+    == slim :_books_short, locals: { books: books(authors: author) }
 - else
   - settings.author_book_counts.each do |author, count|
     h2
       a(href="/books/authors/#{author}")= "#{author} (#{count} books)"
-    == slim :_books, locals: { books: books(authors: author) }
+    == slim :_books_short, locals: { books: books(authors: author) }
 
 
 @@ subjects
 == slim :_association_header, locals: { association: "subjects" }
-- subject_book_counts.each do |subject, count|
+- settings.subject_book_counts.each do |subject, count|
   h2
     a(href="/books/subjects/#{subject}")= "#{subject} (#{count} books)"
-  == slim :_books, locals: { books: books(subjects: subject) }
+  == slim :_books_short, locals: { books: books(subjects: subject) }
 
 
 @@ prc_year_levels
 == slim :_association_header, locals: { association: "prc_year_levels" }
-- prc_year_level_book_counts.each do |prc_year_level, count|
+- settings.prc_year_level_book_counts.each do |prc_year_level, count|
   h2
     a(href="/books/prc_year_levels/#{prc_year_level}")= "#{prc_year_level} (#{count} books)"
-  == slim :_books, locals: { books: books(prc_year_levels: prc_year_level) }
+  == slim :_books_short, locals: { books: books(prc_year_levels: prc_year_level) }
 
 
 @@ list_saved
@@ -545,7 +558,7 @@ header#page-header.page-header
 - settings.word_book_counts.each do |word, count|
   h2
     a(href="/books/words/#{word}")= "#{word} (#{count} books)"
-  == slim :_books, locals: { books: current_books_by_word(word) }
+  == slim :_books_short, locals: { books: current_books_by_word(word) }
 
 
 @@ _header
