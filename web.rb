@@ -6,7 +6,7 @@ require 'newrelic_rpm'
 require './models'
 
 MIN_BOOKS_WITH_AUTHOR = 2
-MIN_BOOKS_WITH_SUBJECT = 2
+MIN_BOOKS_WITH_SUBJECT = 0
 MIN_BOOKS_WITH_WORD = 2
 
 def git_sha
@@ -16,7 +16,7 @@ end
 def books(opts = {})
   if opts.empty?
     my_books.all(:isbn.not => nil, :order => :main_title)
-#      .preload(my_books.authors, my_books.subjects)
+      .preload(my_books.authors, my_books.subjects)
   else
     association, value = *opts.flatten
     case association.to_s
@@ -79,7 +79,7 @@ def author_book_counts
         count = author.author_books.size
       end
       print 'a'
-      h.update(author => count)
+      h.update(author.id => count)
     }
     .reject { |k, v| v < MIN_BOOKS_WITH_AUTHOR }
     .sort_by { |k, v| [0 - v, k] }
@@ -448,6 +448,11 @@ body
     - book.main_title.split.each do |word|
       a rel="tag" href="/books/words/#{normalize_word(word)}"
         = word
+    span.title
+      a(href="/books/subjects")= "Subjects:"
+    - book.subjects.sort.each do |subject|
+      a rel="tag" href="/books/subjects/#{subject.value}"
+        = "#{subject.value} (#{settings.subject_book_counts[subject]})"
   - if !book.loans.empty?
     .book__loans
       span.title
