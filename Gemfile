@@ -17,7 +17,7 @@ gem 'newrelic_rpm'
 
 group :production do
 #  gem 'dm-postgres-adapter'
-  gem 'dm-mysql-adapter'
+  gem 'dm-mysql-adapter' # We get more db space on the free heroku plan by using sharkdb instead of postgres
 end
 
 group :development, :test do

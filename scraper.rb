@@ -1,4 +1,7 @@
 #!/usr/bin/env ruby
+puts "TODO: replace properly with spydus_scraper.rb"
+
+=begin
 require 'mechanize'
 require './models'
 
@@ -79,3 +82,4 @@ class SpydusScraper
 end
 
 SpydusScraper.new.call
+=end

@@ -5,9 +5,9 @@ require 'newrelic_rpm'
 
 require './models'
 
-MIN_BOOKS_WITH_AUTHOR = 2
+MIN_BOOKS_WITH_AUTHOR = 0
 MIN_BOOKS_WITH_SUBJECT = 0
-MIN_BOOKS_WITH_WORD = 2
+MIN_BOOKS_WITH_WORD = 0
 
 def git_sha
   ENV['HEROKU_SLUG_COMMIT']
@@ -16,7 +16,6 @@ end
 def books(opts = {})
   if opts.empty?
     my_books.all(:isbn.not => nil, :order => :main_title)
-      .preload(my_books.authors, my_books.subjects)
   else
     association, value = *opts.flatten
     case association.to_s
@@ -71,15 +70,12 @@ def my_books
 end
 
 def author_book_counts
-  @author_book_counts ||= my_books.authors.all(order: :value) #    .preload(my_books)
-    .inject({}) { |h, author|
-      if ENV['USING_SQLITE']
-        count = 1
-      else
-        count = author.author_books.size
-      end
+  @author_book_counts ||= my_books.author_books.all(order: :author_value)
+    .inject({}) { |h, author_book|
+      author_value = author_book.author_value
+      count = h[author_value] || 0
       print 'a'
-      h.update(author.id => count)
+      h.update(author_value => count+1)
     }
     .reject { |k, v| v < MIN_BOOKS_WITH_AUTHOR }
     .sort_by { |k, v| [0 - v, k] }
@@ -87,11 +83,12 @@ def author_book_counts
 end
 
 def subject_book_counts
-  @subject_book_counts ||= my_books.subjects.all(order: :value) #    .preload(Subject.book_subjects)
-    .inject({}) { |h, subject|
+  @subject_book_counts ||= my_books.book_subjects.all(order: :subject_value)
+    .inject({}) { |h, book_subject|
+      subject_value = book_subject.subject_value
+      count = h[subject_value] || 0
       print 's'
-      # h.update(subject => subject.book_subjects.size)
-      h.update(subject => subject.books.size)
+      h.update(subject_value => count+1)
     }
     .reject { |k, v| v < MIN_BOOKS_WITH_SUBJECT }
     .sort_by { |k, v| [0 - v, k] }
@@ -99,11 +96,12 @@ def subject_book_counts
 end
 
 def prc_year_level_book_counts
-  @prc_year_level_book_counts ||= my_books.prc_year_levels.all(order: :value)
-    .inject({}) { |h, prc_year_level|
+  @prc_year_level_book_counts ||= my_books.book_prc_year_levels.all(order: :prc_year_level_value)
+    .inject({}) { |h, book_prc_year_level|
+      prc_year_level_value = book_prc_year_level.prc_year_level_value
+      count = h[prc_year_level_value] || 0
       print 'p'
-      # h.update(prc_year_level => prc_year_level.book_prc_year_levels.size)
-      h.update(prc_year_level => prc_year_level.books.size)
+      h.update(prc_year_level_value => count+1)
     }
     .sort_by { |k, v| [0 - v, k] }
     .to_h
@@ -414,7 +412,7 @@ body
   .book-cover
     a href="/books/#{book.id}" title=book.main_title
       img src=img_url(get_isbn(book)) alt=book.main_title
-    - if !book.prc_year_levels.empty?
+    - if !book.book_prc_year_levels.empty?
       a href="/books/prc_year_levels"
         img src="http://www.malvernps.vic.edu.au/wp-content/uploads/prchomepage.gif"
   .book-details
@@ -423,7 +421,7 @@ body
     .book__author(itemprop="author")
       = "by "
       - book.author_books.each do |author_book|
-        - author = author_book.author
+        - author = author_book.author_value
         - book_count = settings.author_book_counts[author]
         - if book_count && book_count > 1
           a(rel="author" href="/books/authors/#{author}")= "#{author} (#{book_count})"
@@ -435,12 +433,13 @@ body
 
 @@ _book
 == slim(:_book_short, locals: { book: book }) do
-  - if !book.prc_year_levels.empty?
+  - if !book.book_prc_year_levels.empty?
     .book__prc_year_levels
       span.title
         = "Premier's Reading Challenge - Year Levels:"
-      - book.prc_year_levels.each do |prc_year_level|
-        a(rel="tag" href="/books/prc_year_levels/#{prc_year_level}")= prc_year_level
+      - book.book_prc_year_levels.each do |book_prc_year_level|
+        - prc_year_level_value = book_prc_year_level.prc_year_level_value
+        a(rel="tag" href="/books/prc_year_levels/#{prc_year_level_value}")= prc_year_level_value
         |&nbsp;
   .book__tags
     span.title
@@ -450,9 +449,10 @@ body
         = word
     span.title
       a(href="/books/subjects")= "Subjects:"
-    - book.subjects.sort.each do |subject|
-      a rel="tag" href="/books/subjects/#{subject.value}"
-        = "#{subject.value} (#{settings.subject_book_counts[subject]})"
+    - book.book_subjects(order: :subject_value).each do |book_subject|
+      - subject_value = book_subject.subject_value
+      a rel="tag" href="/books/subjects/#{subject_value}"
+        = "#{subject_value} (#{settings.subject_book_counts[subject_value]})"
   - if !book.loans.empty?
     .book__loans
       span.title
@@ -519,16 +519,9 @@ header#page-header.page-header
 
 @@ authors
 == slim :_association_header, locals: { association: "authors" }
-- if ENV['USING_SQLITE']
-  - my_books.authors(order: :value).each do |author|
-    h2
-      a(href="/books/authors/#{author}")= author
-    == slim :_books_short, locals: { books: books(authors: author) }
-- else
-  - settings.author_book_counts.each do |author, count|
-    h2
-      a(href="/books/authors/#{author}")= "#{author} (#{count} books)"
-    == slim :_books_short, locals: { books: books(authors: author) }
+- settings.author_book_counts.each do |author, count|
+  h2
+    a(href="/books/authors/#{author}")= "#{author} (#{count} books)"
 
 
 @@ subjects

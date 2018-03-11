@@ -52,7 +52,9 @@ class SkippedIsbn
     def seed
       (ENV['SKIPPED_ISBN'] || "").split(",").each do |value|
         first_or_create(value: value)
+        print 'i'
       end
+      puts
     end
   end
 end
@@ -67,11 +69,11 @@ class Book
   has n, :loans
 
   property :id                  , Serial
+  property :isbn                , String , unique_index: true
 
   property :img_url             , String , length: 255
 
   property :main_title          , String , length: 255
-  property :isbn                , String
 
   property :irn                 , String
 
@@ -248,4 +250,3 @@ end
 # Blow everything away while developing ...
 # DataMapper.finalize.auto_migrate!
 DataMapper.finalize.auto_upgrade!
-SkippedIsbn.seed

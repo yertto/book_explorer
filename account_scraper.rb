@@ -8,4 +8,5 @@ card = OpenStruct.new(
   pin: ENV.fetch('CARD_PIN')
 )
 
+SkippedIsbn.seed
 SpydusScraper.new(card).call
