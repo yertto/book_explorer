@@ -527,7 +527,6 @@ header#page-header.page-header
 - loan_book_counts.each do |loan_issued, count|
   h2
     a(href="/books/loans/#{loan_issued}")= "#{loan_issued} (#{count} books)"
-  == slim :_books, locals: { books: books(loans: { issued: loan_issued }) }
 
 
 @@ words
