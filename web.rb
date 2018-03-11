@@ -9,6 +9,139 @@ MIN_BOOKS_WITH_AUTHOR = 2
 MIN_BOOKS_WITH_SUBJECT = 2
 MIN_BOOKS_WITH_WORD = 2
 
+def git_sha
+  ENV['HEROKU_SLUG_COMMIT']
+end
+
+def books(opts = {})
+  if opts.empty?
+    my_books.all(:isbn.not => nil, :order => :main_title)
+#      .preload(my_books.authors, my_books.subjects)
+  else
+    association, value = *opts.flatten
+    case association.to_s
+    when 'words'
+      current_books_by_word(value)
+    when 'loans'
+      current_books_by_loan_issued(value)
+    else
+      if (parent = my_books.send(association).first(value: value))
+        parent.books(order: :main_title)
+      else
+        []
+      end
+    end
+  end
+end
+
+def current_books_by_word(value)
+  ['%% %s', '%s %%', "%%%s'%%", "%% %s'%%", "%s, %%", "%% %s,%%", "%% %s!%%"]
+    .inject(my_books.all(:main_title.like => '%% %s %%' % value, order: :main_title)) { |collection, pat|
+      collection | my_books.all(:main_title.like => pat % value, order: :main_title)
+    }
+end
+
+def current_books_by_loan_issued(value)
+  my_books.loans(issued: value).map(&:book).sort_by(&:main_title)
+end
+
+def get_isbn(book)
+  (book.img_url || '')[/isbn=([^\/]+)/, 1]
+end
+
+def author_path(author)
+  "/author/#{author}"
+end
+
+def subject_path(subject)
+  "/subject/#{subject}"
+end
+
+def img_url(isbn)
+  "https://secure.syndetics.com/index.aspx?isbn=#{isbn}/sc.gif"
+end
+
+def normalize_word(raw_word)
+  raw_word.tr("'!", '').downcase
+end
+
+def my_books
+  # TODO - scope books to some kind of user
+  @my_books ||= Book.not_skipped
+end
+
+def author_book_counts
+  @author_book_counts ||= my_books.authors.all(order: :value) #    .preload(my_books)
+    .inject({}) { |h, author|
+      if ENV['USING_SQLITE']
+        count = 1
+      else
+        count = author.author_books.size
+      end
+      print 'a'
+      h.update(author => count)
+    }
+    .reject { |k, v| v < MIN_BOOKS_WITH_AUTHOR }
+    .sort_by { |k, v| [0 - v, k] }
+    .to_h
+end
+
+def subject_book_counts
+  @subject_book_counts ||= my_books.subjects.all(order: :value) #    .preload(Subject.book_subjects)
+    .inject({}) { |h, subject|
+      print 's'
+      # h.update(subject => subject.book_subjects.size)
+      h.update(subject => subject.books.size)
+    }
+    .reject { |k, v| v < MIN_BOOKS_WITH_SUBJECT }
+    .sort_by { |k, v| [0 - v, k] }
+    .to_h
+end
+
+def prc_year_level_book_counts
+  @prc_year_level_book_counts ||= my_books.prc_year_levels.all(order: :value)
+    .inject({}) { |h, prc_year_level|
+      print 'p'
+      # h.update(prc_year_level => prc_year_level.book_prc_year_levels.size)
+      h.update(prc_year_level => prc_year_level.books.size)
+    }
+    .sort_by { |k, v| [0 - v, k] }
+    .to_h
+end
+
+def loan_book_counts
+  @loan_book_counts ||= my_books.loans.all(order: :issued)
+    .inject({}) { |h, loan|
+      print 'l'
+      h[loan.issued] ||= 0
+      h[loan.issued] += 1
+      h
+    }
+    .to_h
+end
+
+def word_book_counts
+  @word_book_counts ||= (my_books.all(:isbn.not => nil) - my_books.all(:main_title.like => '%[sound recording]'))
+   .map(&:main_title).inject(Hash.new(0)) { |h, title|
+      print 'w'
+      title.split.map { |raw_word| normalize_word(raw_word) }.uniq.each { |normalized_word| h[normalized_word] += 1 }
+      h
+    }
+    .reject { |k, v| v < MIN_BOOKS_WITH_WORD || %w{the a and to}.include?(k) }
+    .sort_by { |k, v| [0 - v, k]}
+    .to_h
+end
+
+def subject_count
+  @subject_count ||= Subject.count
+end
+
+configure do
+  %i(author subject prc_year_level loan word).each do |assoc|
+    sym = "#{assoc}_book_counts".to_sym
+    set sym, send(sym)
+  end
+end
 
 get '/' do
   redirect to('/books')
@@ -73,128 +206,6 @@ get '/index.css' do
   sass :style
 end
 
-
-def my_books
-  # TODO - scope books to some kind of user
-  Book.not_skipped
-end
-
-def books(opts = {})
-  if opts.empty?
-    my_books.all(:isbn.not => nil, :order => :main_title)
-#      .preload(my_books.authors, my_books.subjects)
-  else
-    association, value = *opts.flatten
-    case association.to_s
-    when 'words'
-      current_books_by_word(value)
-    when 'loans'
-      current_books_by_loan_issued(value)
-    else
-      if (parent = my_books.send(association).first(value: value))
-        parent.books(order: :main_title)
-      else
-        []
-      end
-    end
-  end
-end
-
-def current_books_by_word(value)
-  ['%% %s', '%s %%', "%%%s'%%", "%% %s'%%", "%s, %%", "%% %s,%%", "%% %s!%%"]
-    .inject(my_books.all(:main_title.like => '%% %s %%' % value, order: :main_title)) { |collection, pat|
-      collection | my_books.all(:main_title.like => pat % value, order: :main_title)
-    }
-end
-
-def current_books_by_loan_issued(value)
-  my_books.loans(issued: value).map(&:book).sort_by(&:main_title)
-end
-
-def get_isbn(book)
-  (book.img_url || '')[/isbn=([^\/]+)/, 1]
-end
-
-def author_path(author)
-  "/author/#{author}"
-end
-
-def subject_path(subject)
-  "/subject/#{subject}"
-end
-
-def img_url(isbn)
-  "https://secure.syndetics.com/index.aspx?isbn=#{isbn}/sc.gif"
-end
-
-def author_book_counts
-  @author_book_counts ||= my_books.authors.all(order: :value) #    .preload(my_books)
-    .inject({}) { |h, author|
-      if ENV['USING_SQLITE']
-        count = 1
-      else
-        count = author.author_books.size
-      end
-      h.update(author => count)
-    }
-    .reject { |k, v| v < MIN_BOOKS_WITH_AUTHOR }
-    .sort_by { |k, v| [0 - v, k] }
-    .to_h
-end
-
-def subject_book_counts
-  @subject_book_counts ||= my_books.subjects.all(order: :value) #    .preload(Subject.book_subjects)
-    .inject({}) { |h, subject|
-      # h.update(subject => subject.book_subjects.size)
-      h.update(subject => subject.books.size)
-    }
-    .reject { |k, v| v < MIN_BOOKS_WITH_SUBJECT }
-    .sort_by { |k, v| [0 - v, k] }
-    .to_h
-end
-
-def prc_year_level_book_counts
-  @prc_year_level_book_counts ||= my_books.prc_year_levels.all(order: :value)
-    .inject({}) { |h, prc_year_level|
-      # h.update(prc_year_level => prc_year_level.book_prc_year_levels.size)
-      h.update(prc_year_level => prc_year_level.books.size)
-    }
-    .sort_by { |k, v| [0 - v, k] }
-    .to_h
-end
-
-def loan_book_counts
-  @loan_book_counts ||= my_books.loans.all(order: :issued)
-    .inject({}) { |h, loan|
-      h[loan.issued] ||= 0
-      h[loan.issued] += 1
-      h
-    }
-    .to_h
-end
-
-def normalize_word(raw_word)
-  raw_word.tr("'!", '').downcase
-end
-
-def word_book_counts
-  @word_book_counts ||= (my_books.all(:isbn.not => nil) - my_books.all(:main_title.like => '%[sound recording]'))
-   .map(&:main_title).inject(Hash.new(0)) { |h, title|
-      title.split.map { |raw_word| normalize_word(raw_word) }.uniq.each { |normalized_word| h[normalized_word] += 1 }
-      h
-    }
-    .reject { |k, v| v < MIN_BOOKS_WITH_WORD || %w{the a and to}.include?(k) }
-    .sort_by { |k, v| [0 - v, k]}
-    .to_h
-end
-
-def subject_count
-  @subject_count ||= Subject.count
-end
-
-def git_sha
-  ENV['HEROKU_SLUG_COMMIT']
-end
 
 __END__
 
@@ -412,7 +423,7 @@ body
       = "by "
       - book.author_books.each do |author_book|
         - author = author_book.author
-        - book_count = author_book_counts[author]
+        - book_count = settings.author_book_counts[author]
         - if book_count && book_count > 1
           a(rel="author" href="/books/authors/#{author}")= "#{author} (#{book_count})"
         - else
@@ -496,7 +507,7 @@ header#page-header.page-header
       a(href="/books/authors/#{author}")= author
     == slim :_books, locals: { books: books(authors: author) }
 - else
-  - author_book_counts.each do |author, count|
+  - settings.author_book_counts.each do |author, count|
     h2
       a(href="/books/authors/#{author}")= "#{author} (#{count} books)"
     == slim :_books, locals: { books: books(authors: author) }
@@ -524,14 +535,14 @@ header#page-header.page-header
 
 @@ loans
 == slim :_association_header, locals: { association: "loans" }
-- loan_book_counts.each do |loan_issued, count|
+- settings.loan_book_counts.each do |loan_issued, count|
   h2
     a(href="/books/loans/#{loan_issued}")= "#{loan_issued} (#{count} books)"
 
 
 @@ words
 == slim :_association_header, locals: { association: "words" }
-- word_book_counts.each do |word, count|
+- settings.word_book_counts.each do |word, count|
   h2
     a(href="/books/words/#{word}")= "#{word} (#{count} books)"
   == slim :_books, locals: { books: current_books_by_word(word) }
