@@ -1,4 +1,5 @@
-- [ ] graph /books/loans
+- [x] graph /books/loans
+- [ ] add a dropdown to /books/:associations
 - [ ] tabulate /books/authors (eg. http://tablesorter.com/docs/)
 - [ ] dont load jqcloud on *every* page
 - [ ] use better stemmer (eg. https://github.com/aurelian/ruby-stemmer)

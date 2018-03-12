@@ -9,9 +9,10 @@ require 'newrelic_rpm'
 require './models'
 
 MIN_WORD_CLOUD_COUNT = 3
+PAGE_HEADER_HEIGHT = 50 # TODO pass this in to sass somehow
 
 def git_sha
-  ENV['HEROKU_SLUG_COMMIT']
+  ENV['HEROKU_SLUG_COMMIT'] && ENV['HEROKU_SLUG_COMMIT'][0..6]
 end
 
 def books(opts = {})
@@ -188,6 +189,12 @@ get '/books/list_saved' do
   slim :list_saved
 end
 
+get '/books/loans.json' do
+  headers 'Access-Control-Allow-Origin' => '*'
+  content_type :json
+  settings.loan_book_counts.map { |date, count| [date.to_time.to_i*1000, count] }.to_json
+end
+
 get '/books/loans' do
   slim :loans
 end
@@ -232,6 +239,8 @@ __END__
 
 
 @@ style
+$page-header-height: 50px
+
 $border-color: #e9ecef
 
 $book-details-paragraph-font-color: #7e8f9d
@@ -272,7 +281,7 @@ body
 
 .page-header
   background-color: #fff
-  height: 50px
+  height: $page-header-height
   overflow: hidden
   padding: 0 15px
 
@@ -561,9 +570,46 @@ header#page-header.page-header
 
 @@ loans
 == slim :_association_header, locals: { association: "loans" }
-- settings.loan_book_counts.each do |loan_issued, count|
-  h2
-    a(href="/books/loans/#{loan_issued}")= "#{loan_issued} (#{count} books)"
+#loans_graph
+javascript:
+  $.getJSON(
+    '/books/loans.json',
+    function(data) {
+      Highcharts.chart('loans_graph', {
+        chart: {
+          zoomType: 'x'
+        },
+        title: {
+          text: ''
+        },
+        xAxis: {
+          type: 'datetime'
+        },
+        exporting: {
+          enabled: false
+        },
+        credits: {
+          enabled: false
+        },
+        tooltip: {
+          xDateFormat: '%Y-%m-%d'
+        },
+        yAxis: {
+          title: {
+            text: 'Books'
+          }
+        },
+        legend: {
+          enabled: false
+        },
+        series: [{
+          type: 'bar',
+          name: 'books',
+          data: data
+        }]
+      });
+    }
+  );
 
 
 @@ _word_cloud
@@ -574,17 +620,19 @@ javascript:
       #{{words}},
       {
         width: $(window).width(),
-        height: $(window).height()
+        height: ($(window).height() - #{PAGE_HEADER_HEIGHT})
       }
     );
   });
 
 
 @@ words
+== slim :_association_header, locals: { association: "words" }
 == slim :_word_cloud, locals: { words: word_cloud_json(settings.word_book_counts, :words) }
 
 
 @@ subjects
+== slim :_association_header, locals: { association: "subjects" }
 == slim :_word_cloud, locals: { words: word_cloud_json(settings.subject_book_counts, :subjects) }
 
 
@@ -610,8 +658,10 @@ html lang="en"
     link href="/index.css" rel="stylesheet" type="text/css"
     link href="/jqcloud.min.css" rel="stylesheet" type="text/css"
     link href="https://fonts.googleapis.com/css?family=Quicksand:500" rel="stylesheet"
-    script src="http://www.archive.org/includes/jquery-1.6.1.min.js"
+    script src="https://code.jquery.com/jquery-3.3.1.min.js"
     script src="/jqcloud.min.js"
+    script src="https://code.highcharts.com/highcharts.js"
+    script src="https://code.highcharts.com/modules/exporting.js"
 
   body
     == slim :_header
