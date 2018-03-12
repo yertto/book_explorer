@@ -44,7 +44,7 @@ class SkippedIsbn
   include DataMapper::Resource
 
   property :id    , Serial
-  property :value , String
+  property :value , String , unique_index: true
 
   timestamps :at
 
@@ -186,7 +186,7 @@ class Author
   include DataMapper::Resource
 
   property :id         , Serial
-  property :value , String , length: 255, key: true
+  property :value , String , length: 255, key: true , unique: true
 
   has n, :books, through: Resource
 
@@ -203,7 +203,7 @@ class Subject
   include DataMapper::Resource
 
   property :id         , Serial
-  property :value      , String , length: 255, key: true
+  property :value      , String , length: 255, key: true , unique: true
 
   timestamps :at
 
@@ -220,7 +220,7 @@ class PrcYearLevel
   include DataMapper::Resource
 
   property :id    , Serial
-  property :value , String , length: 255, key: true
+  property :value , String , length: 255, key: true , unique: true
 
   has n, :books, through: Resource
 
