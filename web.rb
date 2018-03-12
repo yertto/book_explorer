@@ -1,13 +1,16 @@
 #!/usr/bin/env ruby
 require 'sinatra'
 require 'sass'
+require 'uea-stemmer'
+require 'stopwords'
+
 require 'newrelic_rpm'
 
 require './models'
 
 MIN_BOOKS_WITH_AUTHOR = 0
 MIN_BOOKS_WITH_SUBJECT = 0
-MIN_BOOKS_WITH_WORD = 0
+MIN_BOOKS_WITH_WORD = 1
 
 def git_sha
   ENV['HEROKU_SLUG_COMMIT']
@@ -120,12 +123,16 @@ end
 
 def word_book_counts
   @word_book_counts ||= (my_books.all(:isbn.not => nil) - my_books.all(:main_title.like => '%[sound recording]'))
-   .map(&:main_title).inject(Hash.new(0)) { |h, title|
+   .map(&:main_title).compact.inject(Hash.new(0)) { |h, string|
       print 'w'
-      title.split.map { |raw_word| normalize_word(raw_word) }.uniq.each { |normalized_word| h[normalized_word] += 1 }
+      words = string.split.map(&:downcase).map { |word| word[/[a-z]+/] }.compact
+      settings.stopwords.filter(words).each do |word|
+        stemmed_word = settings.stemmer.stem(word)
+        h[stemmed_word] += 1
+      end
       h
     }
-    .reject { |k, v| v < MIN_BOOKS_WITH_WORD || %w{the a and to}.include?(k) }
+    .reject { |k, v| v < MIN_BOOKS_WITH_WORD }
     .sort_by { |k, v| [0 - v, k]}
     .to_h
 end
@@ -134,12 +141,31 @@ def subject_count
   @subject_count ||= Subject.count
 end
 
+def word_cloud_json
+  # See http://mistic100.github.io/jQCloud/#words-options
+  settings.word_book_counts.map do |word, count|
+    {
+      text: word,
+      weight: count,
+      link: "/books/words/#{word}",
+      html: {
+        title: count
+      }
+    }
+  end.to_json
+end
+
+
 configure do
+  set :stopwords, Stopwords::Snowball::Filter.new("en")
+  set :stemmer, UEAStemmer.new
+
   %i(author subject prc_year_level loan word).each do |assoc|
     sym = "#{assoc}_book_counts".to_sym
     set sym, send(sym)
   end
 end
+
 
 get '/' do
   redirect to('/books')
@@ -552,10 +578,17 @@ header#page-header.page-header
 
 
 @@ words
-== slim :_association_header, locals: { association: "words" }
-- settings.word_book_counts.each do |word, count|
-  h2
-    a(href="/books/words/#{word}")= "#{word} (#{count} books)"
+#word_cloud
+javascript:
+  $(function() {
+    $("#word_cloud").jQCloud(
+      #{{word_cloud_json}},
+      {
+        width: $(window).width(),
+        height: $(window).height()
+      }
+    );
+  });
 
 
 @@ _header
@@ -578,8 +611,11 @@ html lang="en"
     meta http-equiv="x-ua-compatible" content="ie=edge"
     meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0, user-scalable=0, width=device-width"
     link href="/index.css" rel="stylesheet" type="text/css"
+    link href="/jqcloud.min.css" rel="stylesheet" type="text/css"
     link href="https://fonts.googleapis.com/css?family=Quicksand:500" rel="stylesheet"
     script src="http://www.archive.org/includes/jquery-1.6.1.min.js"
+    script src="/jqcloud.min.js"
+
   body
     == slim :_header
     == yield

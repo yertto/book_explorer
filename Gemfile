@@ -12,6 +12,10 @@ gem 'sinatra'
 gem 'slim'
 gem 'sass'
 
+# word processing
+gem 'uea-stemmer'
+gem 'stopwords-filter', require: 'stopwords'
+
 # monitoring gems
 gem 'newrelic_rpm'
 
