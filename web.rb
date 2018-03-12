@@ -644,7 +644,7 @@ footer
   small
     - if git_sha
       | github://
-      a href="https://github.com/yertto/bookexplorer/compare/#{git_sha}...master"= git_sha
+      a href="https://github.com/yertto/bookexplorer/commits/#{git_sha}"= git_sha
 
 
 @@ layout
