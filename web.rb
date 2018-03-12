@@ -8,9 +8,7 @@ require 'newrelic_rpm'
 
 require './models'
 
-MIN_BOOKS_WITH_AUTHOR = 0
-MIN_BOOKS_WITH_SUBJECT = 0
-MIN_BOOKS_WITH_WORD = 3
+MIN_WORD_CLOUD_COUNT = 3
 
 def git_sha
   ENV['HEROKU_SLUG_COMMIT']
@@ -64,7 +62,10 @@ def img_url(isbn)
 end
 
 def normalize_word(raw_word)
-  raw_word.tr("'!", '').downcase
+  # NB. `str[/.+/]` is my version of Active Support's `str.presence`
+  if (word = raw_word.downcase.gsub(/[^a-z]/, '')[/.+/])
+    settings.stemmer.stem(word)
+  end
 end
 
 def my_books
@@ -80,7 +81,6 @@ def author_book_counts
       print 'a'
       h.update(author_value => count+1)
     }
-    .reject { |k, v| v < MIN_BOOKS_WITH_AUTHOR }
     .sort_by { |k, v| [0 - v, k] }
     .to_h
 end
@@ -115,20 +115,22 @@ def subject_book_counts
       h[subject_value] += 1
       print 's'
       h
-    }.reject { |k, v| v < MIN_BOOKS_WITH_SUBJECT }
+    }
+end
+
+def normalized_stemmed_words(string)
+  settings.stopwords.filter(
+    string.split.map { |word| normalize_word(word) }.compact
+  )
 end
 
 def word_book_counts
   @word_book_counts ||= (my_books.all(:isbn.not => nil) - my_books.all(:main_title.like => '%[sound recording]'))
-   .map(&:main_title).compact.inject(Hash.new(0)) { |h, string|
+    .map(&:main_title).compact.inject(Hash.new(0)) { |h, string|
       print 'w'
-      words = string.split.map(&:downcase).map { |word| word.gsub(/[^a-z]/, '') }.compact
-      settings.stopwords.filter(words).each do |word|
-        stemmed_word = settings.stemmer.stem(word)
-        h[stemmed_word] += 1
-      end
+      normalized_stemmed_words(string).each { |word| h[word] += 1 }
       h
-    }.reject { |k, v| v < MIN_BOOKS_WITH_WORD }
+    }
 end
 
 def subject_count
@@ -145,8 +147,8 @@ def word_cloud_json(word_counts, association)
       html: {
         title: count
       }
-    }
-  end.to_json
+    } if count > MIN_WORD_CLOUD_COUNT
+  end.compact.to_json
 end
 
 
@@ -464,10 +466,10 @@ body
         |&nbsp;
   .book__tags
     span.title
-      a(href="/books/words")= "Filter keywords:"
-    - book.main_title.split.each do |word|
-      a rel="tag" href="/books/words/#{normalize_word(word)}"
-        = word
+      a(href="/books/words")= "Title keywords:"
+    - normalized_stemmed_words(book.main_title).each do |word|
+      a rel="tag" href="/books/words/#{word}"
+        = "#{word} (#{settings.word_book_counts[word]})"
     span.title
       a(href="/books/subjects")= "Subjects:"
     - book.book_subjects(order: :subject_value).each do |book_subject|
