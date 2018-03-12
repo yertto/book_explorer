@@ -417,7 +417,7 @@ body
         img src="http://www.malvernps.vic.edu.au/wp-content/uploads/prchomepage.gif"
   .book-details
     h2.book__title(itemprop="name")
-      = book.main_title
+      a href="/books/#{book.id}" title=book.main_title = book.main_title
     .book__author(itemprop="author")
       = "by "
       - book.author_books.each do |author_book|
