@@ -74,20 +74,21 @@ def my_books
   @my_books ||= Book.not_skipped
 end
 
-def author_book_counts
-  @author_book_counts ||= my_books.author_books.all(order: :author_value)
+def authors_book_counts
+  @authors_book_counts ||= my_books.author_books.all(order: :author_value)
     .inject({}) { |h, author_book|
       author_value = author_book.author_value
       count = h[author_value] || 0
       print 'a'
       h.update(author_value => count+1)
     }
-    .sort_by { |k, v| [0 - v, k] }
-    .to_h
+    # sort by count...
+    # .sort_by { |k, v| [0 - v, k] }
+    # .to_h
 end
 
-def prc_year_level_book_counts
-  @prc_year_level_book_counts ||= my_books.book_prc_year_levels.all(order: :prc_year_level_value)
+def prc_year_levels_book_counts
+  @prc_year_levels_book_counts ||= my_books.book_prc_year_levels.all(order: :prc_year_level_value)
     .inject({}) { |h, book_prc_year_level|
       prc_year_level_value = book_prc_year_level.prc_year_level_value
       count = h[prc_year_level_value] || 0
@@ -98,8 +99,8 @@ def prc_year_level_book_counts
     .to_h
 end
 
-def loan_book_counts
-  @loan_book_counts ||= my_books.loans.all(order: :issued)
+def loans_book_counts
+  @loans_book_counts ||= my_books.loans.all(order: :issued)
     .inject({}) { |h, loan|
       print 'l'
       h[loan.issued] ||= 0
@@ -109,8 +110,8 @@ def loan_book_counts
     .to_h
 end
 
-def subject_book_counts
-  @subject_book_counts ||= my_books.book_subjects.all(order: :subject_value)
+def subjects_book_counts
+  @subjects_book_counts ||= my_books.book_subjects.all(order: :subject_value)
     .inject(Hash.new(0)) { |h, book_subject|
       subject_value = book_subject.subject_value
       h[subject_value] += 1
@@ -125,22 +126,24 @@ def normalized_stemmed_words(string)
   )
 end
 
-def word_book_counts
-  @word_book_counts ||= (my_books.all(:isbn.not => nil) - my_books.all(:main_title.like => '%[sound recording]'))
+def words_book_counts
+  @words_book_counts ||= (my_books.all(:isbn.not => nil) - my_books.all(:main_title.like => '%[sound recording]'))
     .map(&:main_title).compact.inject(Hash.new(0)) { |h, string|
       print 'w'
       normalized_stemmed_words(string).each { |word| h[word] += 1 }
       h
     }
+    .sort_by { |k, v| [k, v] }
+    .to_h
 end
 
 def subject_count
   @subject_count ||= Subject.count
 end
 
-def word_cloud_json(word_counts, association)
+def word_cloud_json(association)
   # See http://mistic100.github.io/jQCloud/#words-options
-  word_counts.map do |word, count|
+  settings.send("#{association}_book_counts").map do |word, count|
     {
       text: word,
       weight: count,
@@ -158,7 +161,7 @@ configure do
   set :stopwords, Stopwords::Snowball::Filter.new("en")
   set :stemmer, UEAStemmer.new
 
-  %i(author subject prc_year_level loan word).each do |assoc|
+  %i(authors subjects prc_year_levels loans words).each do |assoc|
     sym = "#{assoc}_book_counts".to_sym
     set sym, send(sym)
   end
@@ -178,11 +181,15 @@ get '/books/authors' do
 end
 
 get '/books/subjects' do
-  slim :subjects
+  slim :word_cloud, locals: { association: :subjects }
 end
 
 get '/books/prc_year_levels' do
-  slim :prc_year_levels
+  slim :word_cloud, locals: { association: :prc_year_levels }
+end
+
+get '/books/words' do
+  slim :word_cloud, locals: { association: :words }
 end
 
 get '/books/list_saved' do
@@ -192,15 +199,11 @@ end
 get '/books/loans.json' do
   headers 'Access-Control-Allow-Origin' => '*'
   content_type :json
-  settings.loan_book_counts.map { |date, count| [date.to_time.to_i*1000, count] }.to_json
+  settings.loans_book_counts.map { |date, count| [date.to_time.to_i*1000, count] }.to_json
 end
 
 get '/books/loans' do
   slim :loans
-end
-
-get '/books/words' do
-  slim :words
 end
 
 get '/books/:association/:value' do |association, value|
@@ -454,7 +457,7 @@ body
       = "by "
       - book.author_books.each do |author_book|
         - author = author_book.author_value
-        - book_count = settings.author_book_counts[author]
+        - book_count = settings.authors_book_counts[author]
         - if book_count && book_count > 1
           a(rel="author" href="/books/authors/#{author}")= "#{author} (#{book_count})"
         - else
@@ -478,13 +481,13 @@ body
       a(href="/books/words")= "Title keywords:"
     - normalized_stemmed_words(book.main_title).each do |word|
       a rel="tag" href="/books/words/#{word}"
-        = "#{word} (#{settings.word_book_counts[word]})"
+        = "#{word} (#{settings.words_book_counts[word]})"
     span.title
       a(href="/books/subjects")= "Subjects:"
     - book.book_subjects(order: :subject_value).each do |book_subject|
       - subject_value = book_subject.subject_value
       a rel="tag" href="/books/subjects/#{subject_value}"
-        = "#{subject_value} (#{settings.subject_book_counts[subject_value]})"
+        = "#{subject_value} (#{settings.subjects_book_counts[subject_value]})"
   - if !book.loans.empty?
     .book__loans
       span.title
@@ -511,10 +514,18 @@ ul.books
 
 
 @@ book
-h1
-  a href="/books" = "/books"
-  | /
-  = book.main_title
+header#page-header.page-header
+  h1
+    a href="/books" = "/books"
+    | /
+    select#slim-single-select
+      - books.map(&:main_title).each do |value|
+        option value=value selected=(value == book.main_title) = value
+    javascript:
+      $(function() {
+        new SlimSelect({select: '#slim-single-select'})
+      });
+
 == slim :_book, locals: { book: book }
 form action="/skip_isbn" method="POST"
   input type="hidden" name="isbn" value=book.isbn
@@ -524,7 +535,6 @@ table
     tr
       th= prop
       td= book.send(prop)
-
 
 
 @@ books
@@ -537,8 +547,13 @@ header#page-header.page-header
       | /
       a href="/books/#{association}" = association
       | /
-      = value
-    = " (#{count} books)"
+      select#slim-single-select
+        - send("#{association}_book_counts").each do |value2, count2|
+          option value=value2 selected=(value == value2) = "#{value2} (#{count2} books)"
+      javascript:
+        $(function() {
+          new SlimSelect({select: '#slim-single-select'})
+        });
 main == slim (params.empty? ? :_books_short : :_books), locals: { books: books }
 
 
@@ -551,17 +566,9 @@ header#page-header.page-header
 
 @@ authors
 == slim :_association_header, locals: { association: "authors" }
-- settings.author_book_counts.each do |author, count|
+- settings.authors_book_counts.each do |author, count|
   h2
     a(href="/books/authors/#{author}")= "#{author} (#{count} books)"
-
-
-@@ prc_year_levels
-== slim :_association_header, locals: { association: "prc_year_levels" }
-- settings.prc_year_level_book_counts.each do |prc_year_level, count|
-  h2
-    a(href="/books/prc_year_levels/#{prc_year_level}")= "#{prc_year_level} (#{count} books)"
-  == slim :_books_short, locals: { books: books(prc_year_levels: prc_year_level) }
 
 
 @@ list_saved
@@ -612,28 +619,19 @@ javascript:
   );
 
 
-@@ _word_cloud
+@@ word_cloud
+== slim :_association_header, locals: { association: association }
 #word_cloud
 javascript:
   $(function() {
     $("#word_cloud").jQCloud(
-      #{{words}},
+      #{{word_cloud_json(association)}},
       {
         width: $(window).width(),
         height: ($(window).height() - #{PAGE_HEADER_HEIGHT})
       }
     );
   });
-
-
-@@ words
-== slim :_association_header, locals: { association: "words" }
-== slim :_word_cloud, locals: { words: word_cloud_json(settings.word_book_counts, :words) }
-
-
-@@ subjects
-== slim :_association_header, locals: { association: "subjects" }
-== slim :_word_cloud, locals: { words: word_cloud_json(settings.subject_book_counts, :subjects) }
 
 
 @@ _header
@@ -658,10 +656,12 @@ html lang="en"
     link href="/index.css" rel="stylesheet" type="text/css"
     link href="/jqcloud.min.css" rel="stylesheet" type="text/css"
     link href="https://fonts.googleapis.com/css?family=Quicksand:500" rel="stylesheet"
+    link href="/slimselect.min.css" rel="stylesheet" type="text/css"
     script src="https://code.jquery.com/jquery-3.3.1.min.js"
     script src="/jqcloud.min.js"
     script src="https://code.highcharts.com/highcharts.js"
     script src="https://code.highcharts.com/modules/exporting.js"
+    script src="/slimselect.min.js"
 
   body
     == slim :_header
