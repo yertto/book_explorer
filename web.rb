@@ -10,7 +10,7 @@ require './models'
 
 MIN_BOOKS_WITH_AUTHOR = 0
 MIN_BOOKS_WITH_SUBJECT = 0
-MIN_BOOKS_WITH_WORD = 1
+MIN_BOOKS_WITH_WORD = 3
 
 def git_sha
   ENV['HEROKU_SLUG_COMMIT']
@@ -85,19 +85,6 @@ def author_book_counts
     .to_h
 end
 
-def subject_book_counts
-  @subject_book_counts ||= my_books.book_subjects.all(order: :subject_value)
-    .inject({}) { |h, book_subject|
-      subject_value = book_subject.subject_value
-      count = h[subject_value] || 0
-      print 's'
-      h.update(subject_value => count+1)
-    }
-    .reject { |k, v| v < MIN_BOOKS_WITH_SUBJECT }
-    .sort_by { |k, v| [0 - v, k] }
-    .to_h
-end
-
 def prc_year_level_book_counts
   @prc_year_level_book_counts ||= my_books.book_prc_year_levels.all(order: :prc_year_level_value)
     .inject({}) { |h, book_prc_year_level|
@@ -121,39 +108,47 @@ def loan_book_counts
     .to_h
 end
 
+def subject_book_counts
+  @subject_book_counts ||= my_books.book_subjects.all(order: :subject_value)
+    .inject(Hash.new(0)) { |h, book_subject|
+      subject_value = book_subject.subject_value
+      h[subject_value] += 1
+      print 's'
+      h
+    }.reject { |k, v| v < MIN_BOOKS_WITH_SUBJECT }
+end
+
 def word_book_counts
   @word_book_counts ||= (my_books.all(:isbn.not => nil) - my_books.all(:main_title.like => '%[sound recording]'))
    .map(&:main_title).compact.inject(Hash.new(0)) { |h, string|
       print 'w'
-      words = string.split.map(&:downcase).map { |word| word[/[a-z]+/] }.compact
+      words = string.split.map(&:downcase).map { |word| word.gsub(/[^a-z]/, '') }.compact
       settings.stopwords.filter(words).each do |word|
         stemmed_word = settings.stemmer.stem(word)
         h[stemmed_word] += 1
       end
       h
-    }
-    .reject { |k, v| v < MIN_BOOKS_WITH_WORD }
-    .sort_by { |k, v| [0 - v, k]}
-    .to_h
+    }.reject { |k, v| v < MIN_BOOKS_WITH_WORD }
 end
 
 def subject_count
   @subject_count ||= Subject.count
 end
 
-def word_cloud_json
+def word_cloud_json(word_counts, association)
   # See http://mistic100.github.io/jQCloud/#words-options
-  settings.word_book_counts.map do |word, count|
+  word_counts.map do |word, count|
     {
       text: word,
       weight: count,
-      link: "/books/words/#{word}",
+      link: "/books/#{association}/#{word}",
       html: {
         title: count
       }
     }
   end.to_json
 end
+
 
 
 configure do
@@ -550,14 +545,6 @@ header#page-header.page-header
     a(href="/books/authors/#{author}")= "#{author} (#{count} books)"
 
 
-@@ subjects
-== slim :_association_header, locals: { association: "subjects" }
-- settings.subject_book_counts.each do |subject, count|
-  h2
-    a(href="/books/subjects/#{subject}")= "#{subject} (#{count} books)"
-  == slim :_books_short, locals: { books: books(subjects: subject) }
-
-
 @@ prc_year_levels
 == slim :_association_header, locals: { association: "prc_year_levels" }
 - settings.prc_year_level_book_counts.each do |prc_year_level, count|
@@ -577,18 +564,26 @@ header#page-header.page-header
     a(href="/books/loans/#{loan_issued}")= "#{loan_issued} (#{count} books)"
 
 
-@@ words
+@@ _word_cloud
 #word_cloud
 javascript:
   $(function() {
     $("#word_cloud").jQCloud(
-      #{{word_cloud_json}},
+      #{{words}},
       {
         width: $(window).width(),
         height: $(window).height()
       }
     );
   });
+
+
+@@ words
+== slim :_word_cloud, locals: { words: word_cloud_json(settings.word_book_counts, :words) }
+
+
+@@ subjects
+== slim :_word_cloud, locals: { words: word_cloud_json(settings.subject_book_counts, :subjects) }
 
 
 @@ _header
