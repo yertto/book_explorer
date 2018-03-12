@@ -556,7 +556,6 @@ header#page-header.page-header
 - settings.word_book_counts.each do |word, count|
   h2
     a(href="/books/words/#{word}")= "#{word} (#{count} books)"
-  == slim :_books_short, locals: { books: current_books_by_word(word) }
 
 
 @@ _header
