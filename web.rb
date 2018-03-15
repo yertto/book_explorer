@@ -9,7 +9,7 @@ require 'newrelic_rpm'
 require './models'
 
 MIN_WORD_CLOUD_COUNT = 3
-PAGE_HEADER_HEIGHT = 50 # TODO pass this in to sass somehow
+PAGE_HEADER_HEIGHT = 44 # TODO pass this in to sass somehow
 
 def git_sha
   ENV['HEROKU_SLUG_COMMIT'] && ENV['HEROKU_SLUG_COMMIT'][0..6]
@@ -242,7 +242,7 @@ __END__
 
 
 @@ style
-$page-header-height: 50px
+$page-header-height: 44px
 
 $border-color: #e9ecef
 
