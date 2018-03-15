@@ -1,11 +1,20 @@
 TODO
 ---
 - [x] graph /books/loans
+- [ ] record books read (ie. digitize paper logs)
+- [ ] record saved list availabilites
 - [ ] drop /books namespace (to save some real estate on mobile)
-- [ ] add links to the /books/loans graph (see http://jsfiddle.net/hsdmdf4w/1/)
 - [ ] add a dropdown to /books/:associations (see http://slimselectjs.com)
-- [ ] tabulate /books/authors (eg. http://tablesorter.com/docs/)
-- [ ] tabulate /books (add *moar* fields make sortable, filterable)
+- [ ] add alpha index ui to /books/authors & /books/
+      * or tabulate /books/authors (eg. http://tablesorter.com/docs/)
+      * and tabulate /books (add *moar* fields make sortable, filterable)
+- [ ] index and graph return dates
+- [ ] smaller font for loans
+- [ ] put assets on CDN
+- [ ] loans graph - book counts use whole numbers
+- [ ] loans graph - book counts use whole numbers
+- [ ] loans graph - add links (see http://jsfiddle.net/hsdmdf4w/1/)
+- [ ] directory structure for subjects
 - [ ] dont load jqcloud on *every* page
 - [ ] use better stemmer (eg. https://github.com/aurelian/ruby-stemmer)
       * heroku postgres extenstion
