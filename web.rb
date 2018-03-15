@@ -11,6 +11,16 @@ require './models'
 MIN_WORD_CLOUD_COUNT = 3
 PAGE_HEADER_HEIGHT = 44 # TODO pass this in to sass somehow
 
+RESOURCE_VIEWS = {
+  authors:         :list,
+  list_saved:      :list_saved,
+  loans:           :loans,
+  prc_year_levels: :word_cloud,
+  subjects:        :word_cloud,
+  words:           :word_cloud
+}.freeze
+
+
 def git_sha
   ENV['HEROKU_SLUG_COMMIT'] && ENV['HEROKU_SLUG_COMMIT'][0..6]
 end
@@ -19,14 +29,14 @@ def books(opts = {})
   if opts.empty?
     my_books.all(:isbn.not => nil, :order => :main_title)
   else
-    association, value = *opts.flatten
-    case association.to_s
-    when 'words'
+    resource, value = *opts.flatten
+    case resource
+    when :words
       current_books_by_word(value)
-    when 'loans'
+    when :loans
       current_books_by_loan_issued(value)
     else
-      if (parent = my_books.send(association).first(value: value))
+      if (parent = my_books.send(resource).first(value: value))
         parent.books(order: :main_title)
       else
         []
@@ -50,28 +60,12 @@ def get_isbn(book)
   (book.img_url || '')[/isbn=([^\/]+)/, 1]
 end
 
-def books_path(value)
-  "/books/#{value}"
+def books_path(value=nil)
+  "/books#{"/#{value}" if value}"
 end
 
-def authors_path(value)
-  "/books/authors/#{value}"
-end
-
-def loans_path(value)
-  "/books/loans/#{value}"
-end
-
-def prc_year_levels_path(value)
-  "/books/prc_year_levels/#{value}"
-end
-
-def subjects_path(value)
-  "/books/subjects/#{value}"
-end
-
-def words_path(value)
-  "/books/words/#{value}"
+def resource_path(resource, value=nil)
+  "/books/#{resource}#{"/#{value}" if value}"
 end
 
 def img_url(isbn)
@@ -157,13 +151,13 @@ def subject_count
   @subject_count ||= Subject.count
 end
 
-def word_cloud_json(association)
+def word_cloud_json(resource)
   # See http://mistic100.github.io/jQCloud/#words-options
-  settings.send("#{association}_book_counts").map do |word, count|
+  settings.send("#{resource}_book_counts").map do |word, count|
     {
       text: word,
       weight: count,
-      link: "/#{association}/#{word}",
+      link: resource_path(resource, word),
       html: {
         title: count
       }
@@ -184,32 +178,14 @@ configure do
 end
 
 
-get '/' do
-  redirect to '/books'
-end
 
-get '/books' do
+get books_path do
   slim :books, locals: { books: books, count: books.count }
 end
 
-get '/books/authors' do
-  slim :authors
-end
-
-get '/books/subjects' do
-  slim :word_cloud, locals: { association: :subjects }
-end
-
-get '/books/prc_year_levels' do
-  slim :word_cloud, locals: { association: :prc_year_levels }
-end
-
-get '/books/words' do
-  slim :word_cloud, locals: { association: :words }
-end
-
-get '/books/list_saved' do
-  slim :list_saved
+get '/index.css' do
+  cache_control :public, max_age: 600
+  sass :style
 end
 
 get '/books/loans.json' do
@@ -218,14 +194,17 @@ get '/books/loans.json' do
   settings.loans_book_counts.map { |date, count| [date.to_time.to_i*1000, count] }.to_json
 end
 
-get '/books/loans' do
-  slim :loans
+RESOURCE_VIEWS.each do |resource, view|
+  get resource_path(resource) do
+    slim view, locals: { resource: resource }
+  end
 end
 
-get '/books/:association/:value' do |association, value|
-  books = books(association => value)
+get '/books/:resource/:value' do |resource, value|
+  resource = resource.to_sym
+  books = books(resource => value)
   slim :books, locals: {
-    association: association,
+    resource: resource,
     value: value,
     count: books.count,
     books: books
@@ -245,13 +224,9 @@ post '/skip_isbn' do
     SkippedIsbn.create(value: isbn)
     Book.first(isbn: isbn).destroy
   end
-  redirect to '/books'
+  redirect to books_path
 end
 
-get '/index.css' do
-  cache_control :public, max_age: 600
-  sass :style
-end
 
 
 __END__
@@ -464,7 +439,7 @@ body
     a href=books_path(book.id) title=book.main_title
       img src=img_url(get_isbn(book)) alt=book.main_title
     - if !book.book_prc_year_levels.empty?
-      a href="/books/prc_year_levels"
+      a href=resource_path(:prc_year_levels)
         img src="http://www.malvernps.vic.edu.au/wp-content/uploads/prchomepage.gif"
   .book-details
     h2.book__title(itemprop="name")
@@ -474,7 +449,7 @@ body
       - book.author_books.each do |author_book|
         - author = author_book.author_value
         - book_count = settings.authors_book_counts[author]
-        a rel="author" href=authors_path(author) = (book_count && book_count > 1) ? "#{author} (#{book_count})" : author
+        a rel="author" href=resource_path(:authors, author) = (book_count && book_count > 1) ? "#{author} (#{book_count})" : author
         |&nbsp;
 == yield if block_given?
 
@@ -487,28 +462,28 @@ body
         = "Premier's Reading Challenge - Year Levels:"
       - book.book_prc_year_levels.each do |book_prc_year_level|
         - prc_year_level_value = book_prc_year_level.prc_year_level_value
-        a rel="tag" href=prc_year_levels_path(prc_year_level_value) = prc_year_level_value
+        a rel="tag" href=resource_path(:prc_year_levels, prc_year_level_value) = prc_year_level_value
         |&nbsp;
   .book__tags
     span.title
-      a href="/books/words"= "Title keywords:"
+      a href=resource_path(:words) = "Title keywords:"
     - normalized_stemmed_words(book.main_title).each do |word|
-      a rel="tag" href=words_path(word)
+      a rel="tag" href=resource_path(:words, word)
         = "#{word} (#{settings.words_book_counts[word]})"
     span.title
-      a href="/books/subjects"= "Subjects:"
+      a href=resource_path(:subjects) = "Subjects:"
     - book.book_subjects(order: :subject_value).each do |book_subject|
       - subject_value = book_subject.subject_value
-      a rel="tag" href=subjects_path(subject_value)
+      a rel="tag" href=resource_path(:subjects, subject_value)
         = "#{subject_value} (#{settings.subjects_book_counts[subject_value]})"
   - if !book.loans.empty?
     .book__loans
       span.title
-        a href="/books/loans"= "Loan(s):"
+        a href=resource_path(:loans) = "Loan(s):"
       ol
         - book.loans(order: :issued).each do |loan|
           li
-            a href=loans_path(loan.issued) = loan.issued
+            a href=resource_path(:loans, loan.issued) = loan.issued
             small= " (Returned #{loan.returned})"
 
 
@@ -529,7 +504,7 @@ ul.books
 @@ book
 header#page-header.page-header
   h1
-    a href="/books" = "/books"
+    a href=books_path = books_path
     | /
     select#slim-single-select
       - books.map(&:main_title).each do |value|
@@ -554,14 +529,14 @@ table
 header#page-header.page-header
   h1
     - if params.empty?
-      = "/books"
+      = books_path
     - else
-      a href="/books" = "/books"
+      a href=books_path = books_path
       | /
-      a href="/books/#{association}" = association
+      a href=resource_path(resource) = resource
       | /
       select#slim-single-select
-        - send("#{association}_book_counts").each do |value2, count2|
+        - send("#{resource}_book_counts").each do |value2, count2|
           option value=value2 selected=(value == value2) = "#{value2} (#{count2} books)"
       javascript:
         $(function() {
@@ -570,18 +545,18 @@ header#page-header.page-header
 main == slim (params.empty? ? :_books_short : :_books), locals: { books: books }
 
 
-@@ _association_header
+@@ _resource_header
 header#page-header.page-header
   h1
-    a href="/books" = "/books"
-    | #{association}
+    a href=books_path = books_path
+    | /#{resource}
 
 
-@@ authors
-== slim :_association_header, locals: { association: "authors" }
-- settings.authors_book_counts.each do |author, count|
+@@ list
+== slim :_resource_header, locals: { resource: resource }
+- settings.send("#{resource}_book_counts").each do |res, count|
   h2
-    a href=authors_path(author) = "#{author} (#{count} books)"
+    a href=resource_path(resource, res) = "#{res} (#{count} books)"
 
 
 @@ list_saved
@@ -589,7 +564,7 @@ header#page-header.page-header
 
 
 @@ loans
-== slim :_association_header, locals: { association: "loans" }
+== slim :_resource_header, locals: { resource: :loans }
 #loans_graph
 javascript:
   $.getJSON(
@@ -633,12 +608,12 @@ javascript:
 
 
 @@ word_cloud
-== slim :_association_header, locals: { association: association }
+== slim :_resource_header, locals: { resource: resource }
 #word_cloud
 javascript:
   $(function() {
     $("#word_cloud").jQCloud(
-      #{{word_cloud_json(association)}},
+      #{{word_cloud_json(resource)}},
       {
         width: $(window).width(),
         height: ($(window).height() - #{PAGE_HEADER_HEIGHT})
