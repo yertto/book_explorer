@@ -50,12 +50,28 @@ def get_isbn(book)
   (book.img_url || '')[/isbn=([^\/]+)/, 1]
 end
 
-def author_path(author)
-  "/author/#{author}"
+def books_path(value)
+  "/books/#{value}"
 end
 
-def subject_path(subject)
-  "/subject/#{subject}"
+def authors_path(value)
+  "/books/authors/#{value}"
+end
+
+def loans_path(value)
+  "/books/loans/#{value}"
+end
+
+def prc_year_levels_path(value)
+  "/books/prc_year_levels/#{value}"
+end
+
+def subjects_path(value)
+  "/books/subjects/#{value}"
+end
+
+def words_path(value)
+  "/books/words/#{value}"
 end
 
 def img_url(isbn)
@@ -147,7 +163,7 @@ def word_cloud_json(association)
     {
       text: word,
       weight: count,
-      link: "/books/#{association}/#{word}",
+      link: "/#{association}/#{word}",
       html: {
         title: count
       }
@@ -169,7 +185,7 @@ end
 
 
 get '/' do
-  redirect to('/books')
+  redirect to '/books'
 end
 
 get '/books' do
@@ -229,7 +245,7 @@ post '/skip_isbn' do
     SkippedIsbn.create(value: isbn)
     Book.first(isbn: isbn).destroy
   end
-  redirect to('/books')
+  redirect to '/books'
 end
 
 get '/index.css' do
@@ -445,23 +461,20 @@ body
 @@ _book_short
 .book(itemscope itemtype="http://schema.org/Book")
   .book-cover
-    a href="/books/#{book.id}" title=book.main_title
+    a href=books_path(book.id) title=book.main_title
       img src=img_url(get_isbn(book)) alt=book.main_title
     - if !book.book_prc_year_levels.empty?
       a href="/books/prc_year_levels"
         img src="http://www.malvernps.vic.edu.au/wp-content/uploads/prchomepage.gif"
   .book-details
     h2.book__title(itemprop="name")
-      a href="/books/#{book.id}" title=book.main_title = book.main_title
+      a href=books_path(book.id) title=book.main_title = book.main_title
     .book__author(itemprop="author")
       = "by "
       - book.author_books.each do |author_book|
         - author = author_book.author_value
         - book_count = settings.authors_book_counts[author]
-        - if book_count && book_count > 1
-          a(rel="author" href="/books/authors/#{author}")= "#{author} (#{book_count})"
-        - else
-          a(rel="author" href="/books/authors/#{author}")= author
+        a rel="author" href=authors_path(author) = (book_count && book_count > 1) ? "#{author} (#{book_count})" : author
         |&nbsp;
 == yield if block_given?
 
@@ -474,28 +487,28 @@ body
         = "Premier's Reading Challenge - Year Levels:"
       - book.book_prc_year_levels.each do |book_prc_year_level|
         - prc_year_level_value = book_prc_year_level.prc_year_level_value
-        a(rel="tag" href="/books/prc_year_levels/#{prc_year_level_value}")= prc_year_level_value
+        a rel="tag" href=prc_year_levels_path(prc_year_level_value) = prc_year_level_value
         |&nbsp;
   .book__tags
     span.title
-      a(href="/books/words")= "Title keywords:"
+      a href="/books/words"= "Title keywords:"
     - normalized_stemmed_words(book.main_title).each do |word|
-      a rel="tag" href="/books/words/#{word}"
+      a rel="tag" href=words_path(word)
         = "#{word} (#{settings.words_book_counts[word]})"
     span.title
-      a(href="/books/subjects")= "Subjects:"
+      a href="/books/subjects"= "Subjects:"
     - book.book_subjects(order: :subject_value).each do |book_subject|
       - subject_value = book_subject.subject_value
-      a rel="tag" href="/books/subjects/#{subject_value}"
+      a rel="tag" href=subjects_path(subject_value)
         = "#{subject_value} (#{settings.subjects_book_counts[subject_value]})"
   - if !book.loans.empty?
     .book__loans
       span.title
-        a(href="/books/loans")= "Loan(s):"
+        a href="/books/loans"= "Loan(s):"
       ol
         - book.loans(order: :issued).each do |loan|
           li
-            a(href="/books/loans/#{loan.issued}")= loan.issued
+            a href=loans_path(loan.issued) = loan.issued
             small= " (Returned #{loan.returned})"
 
 
@@ -561,14 +574,14 @@ main == slim (params.empty? ? :_books_short : :_books), locals: { books: books }
 header#page-header.page-header
   h1
     a href="/books" = "/books"
-    | /#{association}
+    | #{association}
 
 
 @@ authors
 == slim :_association_header, locals: { association: "authors" }
 - settings.authors_book_counts.each do |author, count|
   h2
-    a(href="/books/authors/#{author}")= "#{author} (#{count} books)"
+    a href=authors_path(author) = "#{author} (#{count} books)"
 
 
 @@ list_saved
