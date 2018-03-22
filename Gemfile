@@ -29,4 +29,5 @@ group :development, :test do
   gem 'shotgun'
   gem 'pry'
   gem 'terminal-table'
+  gem 'watir'
 end
