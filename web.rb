@@ -61,11 +61,11 @@ def get_isbn(book)
 end
 
 def books_path(value=nil)
-  "/books#{"/#{value}" if value}"
+  "/#{value if value}"
 end
 
 def resource_path(resource, value=nil)
-  "/books/#{resource}#{"/#{value}" if value}"
+  "/#{resource}#{"/#{value}" if value}"
 end
 
 def img_url(isbn)
@@ -188,7 +188,7 @@ get '/index.css' do
   sass :style
 end
 
-get '/books/loans.json' do
+get '/loans.json' do
   headers 'Access-Control-Allow-Origin' => '*'
   content_type :json
   settings.loans_book_counts.map { |date, count| [date.to_time.to_i*1000, count] }.to_json
@@ -200,7 +200,7 @@ RESOURCE_VIEWS.each do |resource, view|
   end
 end
 
-get '/books/:resource/:value' do |resource, value|
+get '/:resource/:value' do |resource, value|
   resource = resource.to_sym
   books = books(resource => value)
   slim :books, locals: {
@@ -211,7 +211,7 @@ get '/books/:resource/:value' do |resource, value|
   }
 end
 
-get '/books/:id' do |id|
+get '/:id' do |id|
   slim :book, locals: { book: Book.get(id) }
 end
 
@@ -505,7 +505,6 @@ ul.books
 header#page-header.page-header
   h1
     a href=books_path = books_path
-    | /
     select#slim-single-select
       - books.map(&:main_title).each do |value|
         option value=value selected=(value == book.main_title) = value
@@ -532,7 +531,6 @@ header#page-header.page-header
       = books_path
     - else
       a href=books_path = books_path
-      | /
       a href=resource_path(resource) = resource
       | /
       select#slim-single-select
@@ -549,7 +547,7 @@ main == slim (params.empty? ? :_books_short : :_books), locals: { books: books }
 header#page-header.page-header
   h1
     a href=books_path = books_path
-    | /#{resource}
+    | #{resource}
 
 
 @@ list
@@ -568,7 +566,7 @@ header#page-header.page-header
 #loans_graph
 javascript:
   $.getJSON(
-    '/books/loans.json',
+    '/loans.json',
     function(data) {
       Highcharts.chart('loans_graph', {
         chart: {
