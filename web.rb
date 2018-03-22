@@ -13,7 +13,8 @@ PAGE_HEADER_HEIGHT = 44 # TODO pass this in to sass somehow
 
 RESOURCE_VIEWS = {
   authors:         :list,
-  list_saved:      :list_saved,
+  books:           :books,
+  books_saved:     :books_saved,
   loans:           :loans,
   prc_year_levels: :word_cloud,
   subjects:        :word_cloud,
@@ -61,7 +62,7 @@ def get_isbn(book)
 end
 
 def books_path(value=nil)
-  "/#{value if value}"
+  "/books/#{value if value}"
 end
 
 def resource_path(resource, value=nil)
@@ -178,9 +179,12 @@ configure do
 end
 
 
+get '/' do
+  redirect to '/books'
+end
 
 get books_path do
-  slim :books, locals: { books: books, count: books.count }
+  slim :books, locals: { resource: :books, books: books, count: books.count }
 end
 
 get '/index.css' do
@@ -200,6 +204,10 @@ RESOURCE_VIEWS.each do |resource, view|
   end
 end
 
+get '/books/:value' do |value|
+  slim :book, locals: { resource: :books, book: Book.get(value), value: value }
+end
+
 get '/:resource/:value' do |resource, value|
   resource = resource.to_sym
   books = books(resource => value)
@@ -209,10 +217,6 @@ get '/:resource/:value' do |resource, value|
     count: books.count,
     books: books
   }
-end
-
-get '/:id' do |id|
-  slim :book, locals: { book: Book.get(id) }
 end
 
 post '/skip_isbn' do
@@ -445,7 +449,7 @@ body
     h2.book__title(itemprop="name")
       a href=books_path(book.id) title=book.main_title = book.main_title
     .book__author(itemprop="author")
-      = "by "
+      a href=resource_path(:authors) = "by "
       - book.author_books.each do |author_book|
         - author = author_book.author_value
         - book_count = settings.authors_book_counts[author]
@@ -502,17 +506,7 @@ ul.books
 
 
 @@ book
-header#page-header.page-header
-  h1
-    a href=books_path = books_path
-    select#slim-single-select
-      - books.map(&:main_title).each do |value|
-        option value=value selected=(value == book.main_title) = value
-    javascript:
-      $(function() {
-        new SlimSelect({select: '#slim-single-select'})
-      });
-
+== slim :_resource_header, locals: locals
 == slim :_book, locals: { book: book }
 form action="/skip_isbn" method="POST"
   input type="hidden" name="isbn" value=book.isbn
@@ -525,29 +519,35 @@ table
 
 
 @@ books
-header#page-header.page-header
-  h1
-    - if params.empty?
-      = books_path
-    - else
-      a href=books_path = books_path
-      a href=resource_path(resource) = resource
-      | /
-      select#slim-single-select
-        - send("#{resource}_book_counts").each do |value2, count2|
-          option value=value2 selected=(value == value2) = "#{value2} (#{count2} books)"
-      javascript:
-        $(function() {
-          new SlimSelect({select: '#slim-single-select'})
-        });
+== slim :_resource_header, locals: locals
 main == slim (params.empty? ? :_books_short : :_books), locals: { books: books }
 
 
 @@ _resource_header
 header#page-header.page-header
   h1
-    a href=books_path = books_path
-    | #{resource}
+    | /
+    select#slim-single-select0 onChange="document.location.href='/'+this.value"
+      - RESOURCE_VIEWS.each do |resource2, view|
+        option value=resource2 selected=(resource == resource2) = resource2
+    javascript:
+      $(function() {
+        new SlimSelect({select: '#slim-single-select0'})
+      });
+    - if defined?(value)
+      | /
+      select#slim-single-select onChange="document.location.href='/#{resource}/'+this.value"
+        - case resource
+          - when :books
+            - books.each do |book2|
+              option value=book2.id selected=(book2.main_title == book.main_title) = book2.main_title
+          - else
+            - send("#{resource}_book_counts").each do |val, count|
+              option value=val selected=(val == value) = "#{val} (#{count} books)"
+      javascript:
+        $(function() {
+          new SlimSelect({select: '#slim-single-select'})
+        });
 
 
 @@ list
@@ -557,12 +557,13 @@ header#page-header.page-header
     a href=resource_path(resource, res) = "#{res} (#{count} books)"
 
 
-@@ list_saved
-== slim :_books, locals: { books: my_books.all(list_saved: true) }
+@@ books_saved
+== slim :_resource_header, locals: { resource: resource }
+== slim :_books, locals: { books: books.all(list_saved: true) }
 
 
 @@ loans
-== slim :_resource_header, locals: { resource: :loans }
+== slim :_resource_header, locals: { resource: resource }
 #loans_graph
 javascript:
   $.getJSON(
