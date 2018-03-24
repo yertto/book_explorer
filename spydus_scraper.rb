@@ -127,7 +127,7 @@ class SpydusScraper
     last_scraped_at = Scrape.last&.created_at
     # last_scraped_threshold = DateTime.now - ONE_DAY # ??? why no worky?
     last_scraped_threshold = Date.parse((Time.now - ONE_DAY).to_s)
-    if last_scraped_at.nil? || last_scraped_at < last_scraped_threshold
+    if last_scraped_at.nil? || last_scraped_at < last_scraped_threshold || ENV['FORCE_SCRAPE']
       puts "Scraping...  (Last scraped at: #{last_scraped_at})"
       do_scrape
       Scrape.create
