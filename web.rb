@@ -10,6 +10,7 @@ require './models'
 
 MIN_WORD_CLOUD_COUNT = 2
 PAGE_HEADER_HEIGHT = 44 # TODO pass this in to sass somehow
+OVERDUE_DAYS = 4 # warning for overdue books
 
 INDEXED_RESOURCES = %i(
   audience
@@ -558,7 +559,8 @@ body
           th status
         - book.current_loans.each do |current_loan|
           tr
-            td: a href=resource_path(:current_loans, current_loan.due) = current_loan.due
+            td bgcolor="#{"red" if current_loan.due < (Date.today + OVERDUE_DAYS)}"
+              a href=resource_path(:current_loans, current_loan.due) = current_loan.due
             td bgcolor="#{"red" if current_loan.status == "Renewed 4 times"}" = current_loan.status
 == yield if block_given?
 
