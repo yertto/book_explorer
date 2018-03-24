@@ -4,9 +4,9 @@ TODO
 - [x] drop /books namespace (to save some real estate on mobile)
 - [x] add a dropdown to /books/:associations (see http://slimselectjs.com)
 - [x] calendar heatmap (http://cal-heatmap.com or https://github.com/DKirwan/calendar-heatmap)
-      * loans
-      * reads
-      * prc reads
+  - [x] loans - borrows & returns
+  - [ ] reads
+  - [ ] prc reads
 - [x] moar indexes
       ** dewey_class (eg. [E])
       ** audience (eg. For children)
@@ -20,24 +20,21 @@ TODO
       * word cloud on description
       * lc_class (eg. PZ7.V827)
       * language
+- [x] rename books_saved to saved
+- [ ] record books read (ie. digitize paper logs)
+- [ ] rename prc_year_levels to prc
 - [ ] collapseable breadcrumbs (eg. "a..> Willems, Mo")
 - [ ] saved list availabilites json
       * display
-- [ ] rename prc_year_levels to prc
-- [ ] rename books_saved to saved
 - [ ] authors
       * parse (first_name, last_name)
       * consolidate duplicates
 - [ ] star ratings
-- [ ] record books read (ie. digitize paper logs)
 - [ ] add alpha index ui to /books/authors & /books/
       * or tabulate /books/authors (eg. http://tablesorter.com/docs/)
       * and tabulate /books (add *moar* fields make sortable, filterable)
-- [ ] index and graph return dates
 - [ ] smaller font for loans
 - [ ] put assets on CDN
-- [ ] loans graph - book counts use whole numbers
-- [ ] loans graph - add links (see http://jsfiddle.net/hsdmdf4w/1/)
 - [ ] directory structure for subjects
 - [ ] dont load jqcloud on *every* page
 - [ ] use better stemmer (eg. https://github.com/aurelian/ruby-stemmer)
