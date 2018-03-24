@@ -607,7 +607,7 @@ header#page-header.page-header
     select#slim-single-select0 onChange="document.location.href='/'+escape(this.value)"
       - RESOURCE_VIEWS.each do |resource2, view|
         option value=resource2 selected=(resource == resource2) = resource2
-    javascript: new SlimSelect({select: '#slim-single-select0'})
+    javascript: new SlimSelect({select: '#slim-single-select0', showSearch: false})
     - if defined?(value)
       | >
       select#slim-single-select1 onChange="document.location.href='/#{resource}/'+escape(this.value)"
@@ -620,7 +620,7 @@ header#page-header.page-header
               option value=val selected=(val == value) = "#{val} (#{count} books)"
       javascript:
         $(function() {
-          new SlimSelect({select: '#slim-single-select1'})
+          new SlimSelect({select: '#slim-single-select1', showSearch: false})
         });
 
 
