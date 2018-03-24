@@ -154,9 +154,8 @@ end
 
 def authors_book_counts
   @authors_book_counts ||= my_books.author_books.all(order: :author_value)
-    .inject(Hash.new(0)) { |h, author_book|
-      author_value = author_book.author_value
-      h[author_value] += 1
+    .inject(Hash.new(0)) { |h, res|
+      h[res.author_value] += 1
       print 'a'
       h
     }
@@ -164,41 +163,35 @@ end
 
 def prc_year_levels_book_counts
   @prc_year_levels_book_counts ||= my_books.book_prc_year_levels.all(order: :prc_year_level_value)
-    .inject(Hash.new(0)) { |h, book_prc_year_level|
-      prc_year_level_value = book_prc_year_level.prc_year_level_value
-      h[prc_year_level_value] += 1
+    .inject(Hash.new(0)) { |h, res|
+      h[res.prc_year_level_value] += 1
       print 'p'
       h
     }
-    .sort_by { |k, v| [0 - v, k] }
-    .to_h
 end
 
 def borrows_book_counts
   @borrows_book_counts ||= my_books.loans.all(order: :issued)
-    .inject(Hash.new(0)) { |h, loan|
+    .inject(Hash.new(0)) { |h, res|
       print 'b'
-      h[loan.issued] += 1
+      h[res.issued] += 1
       h
     }
-    .to_h
 end
 
 def returns_book_counts
   @returns_book_counts ||= my_books.loans.all(order: :returned)
-    .inject(Hash.new(0)) { |h, loan|
+    .inject(Hash.new(0)) { |h, res|
       print 'r'
-      h[loan.returned] += 1
+      h[res.returned] += 1
       h
     }
-    .to_h
 end
 
 def subjects_book_counts
   @subjects_book_counts ||= my_books.book_subjects.all(order: :subject_value)
-    .inject(Hash.new(0)) { |h, book_subject|
-      subject_value = book_subject.subject_value
-      h[subject_value] += 1
+    .inject(Hash.new(0)) { |h, res|
+      h[res.subject_value] += 1
       print 's'
       h
     }
@@ -611,7 +604,7 @@ table
 @@ _resource_header
 header#page-header.page-header
   h1
-    select#slim-single-select0 onChange="document.location.href='/'+this.value"
+    select#slim-single-select0 onChange="document.location.href='/'+escape(this.value)"
       - RESOURCE_VIEWS.each do |resource2, view|
         option value=resource2 selected=(resource == resource2) = resource2
     javascript: new SlimSelect({select: '#slim-single-select0'})
