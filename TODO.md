@@ -1,17 +1,40 @@
 TODO
 ---
 - [x] graph /books/loans
+- [x] drop /books namespace (to save some real estate on mobile)
+- [x] add a dropdown to /books/:associations (see http://slimselectjs.com)
+- [ ] calendar heatmap (http://cal-heatmap.com or https://github.com/DKirwan/calendar-heatmap)
+      * loans
+      * reads
+      * prc reads
+- [ ] collapseable breadcrumbs (eg. "a..> Willems, Mo")
+- [ ] saved list availabilites json
+      * display
+- [ ] rename prc_year_levels to prc
+- [ ] rename books_saved to saved
+- [ ] moar indexes
+      * edition
+      * imprint (eg. Fitzroy, Vic. : Black Dog Books, 2007.)
+      * collation (eg. 34 unnumbered pages : colour illustrations ; 21 x 27 cm)
+        * parse collation
+      * notes (eg. Cover title.)
+      * word cloud on description
+      * dewey_class (eg. [E])
+      * lc_class (eg. PZ7.V827)
+      * language
+      * series_title (eg. ["Victorian Premier's Reading Challenge"])
+      * audience (eg. For children)
+- [ ] authors
+      * parse (first_name, last_name)
+      * consolidate duplicates
+- [ ] star ratings
 - [ ] record books read (ie. digitize paper logs)
-- [ ] record saved list availabilites
-- [ ] drop /books namespace (to save some real estate on mobile)
-- [ ] add a dropdown to /books/:associations (see http://slimselectjs.com)
 - [ ] add alpha index ui to /books/authors & /books/
       * or tabulate /books/authors (eg. http://tablesorter.com/docs/)
       * and tabulate /books (add *moar* fields make sortable, filterable)
 - [ ] index and graph return dates
 - [ ] smaller font for loans
 - [ ] put assets on CDN
-- [ ] loans graph - book counts use whole numbers
 - [ ] loans graph - book counts use whole numbers
 - [ ] loans graph - add links (see http://jsfiddle.net/hsdmdf4w/1/)
 - [ ] directory structure for subjects
