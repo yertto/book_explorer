@@ -529,7 +529,8 @@ body
     h2.book__title(itemprop="name")
       a href=books_path(book.id) title=book.main_title = book.main_title
     .book__author(itemprop="author")
-      a href=resource_path(:authors) = "by "
+      a href=resource_path(:authors) by
+      |&nbsp;
       - book.author_books.each do |author_book|
         - author = author_book.author_value
         - book_count = settings.authors_book_counts[author]
@@ -539,57 +540,49 @@ body
 
 
 @@ _book
-== slim(:_book_short, locals: { book: book }) do
+== slim :_book_short, locals: { book: book } do
   - if !book.book_prc_year_levels.empty?
     .book__prc_year_levels
-      span.title
-        = "Premier's Reading Challenge - Year Levels:"
+      span.title Premier's Reading Challenge - Year Levels:
       - book.book_prc_year_levels.each do |book_prc_year_level|
         - prc_year_level_value = book_prc_year_level.prc_year_level_value
         a rel="tag" href=resource_path(:prc_year_levels, prc_year_level_value) = prc_year_level_value
         |&nbsp;
   .book__tags
     span.title
-      a href=resource_path(:words) = "Title keywords:"
+      a href=resource_path(:words) Title keywords:
     - normalized_stemmed_words(book.main_title).each do |word|
-      a rel="tag" href=resource_path(:words, word)
-        = "#{word} (#{settings.words_book_counts[word]})"
+      a rel="tag" href=resource_path(:words, word) = "#{word} (#{settings.words_book_counts[word]})"
     span.title
-      a href=resource_path(:subjects) = "Subjects:"
+      a href=resource_path(:subjects) Subjects:
     - book.book_subjects(order: :subject_value).each do |book_subject|
       - subject_value = book_subject.subject_value
-      a rel="tag" href=resource_path(:subjects, subject_value)
-        = "#{subject_value} (#{settings.subjects_book_counts[subject_value]})"
+      a rel="tag" href=resource_path(:subjects, subject_value) = "#{subject_value} (#{settings.subjects_book_counts[subject_value]})"
   - if !book.loans.empty?
     .book__loans
-      span.title
-        a href=resource_path(:borrows) = "Loan(s):"
+      span.title Loan(s):
       table border=1
         tr
           th
-          th borrowed
-          th returned
+          th: a href=resource_path(:borrows) borrowed
+          th: a href=resource_path(:returns) returned
           - book.loans(order: :issued).each_with_index do |loan, index|
             tr
               td = index+1
-              td
-                a href=resource_path(:borrows, loan.issued) = loan.issued
-              td
-                a href=resource_path(:returns, loan.returned) = loan.returned
+              td: a href=resource_path(:borrows, loan.issued) = loan.issued
+              td: a href=resource_path(:returns, loan.returned) = loan.returned
 
 
 @@ _books
 ul.books
   - books.each do |book|
-    li
-      == slim :_book, locals: { book: book }
+    li == slim :_book, locals: { book: book }
 
 
 @@ _books_short
 ul.books
   - books.each do |book|
-    li
-      == slim :_book_short, locals: { book: book }
+    li == slim :_book_short, locals: { book: book }
 
 
 @@ book
@@ -618,15 +611,13 @@ table
 @@ _resource_header
 header#page-header.page-header
   h1
-    | /
     select#slim-single-select0 onChange="document.location.href='/'+this.value"
       - RESOURCE_VIEWS.each do |resource2, view|
         option value=resource2 selected=(resource == resource2) = resource2
-    javascript:
-      new SlimSelect({select: '#slim-single-select0'})
+    javascript: new SlimSelect({select: '#slim-single-select0'})
     - if defined?(value)
-      | /
-      select#slim-single-select onChange="document.location.href='/#{resource}/'+escape(this.value)"
+      | >
+      select#slim-single-select1 onChange="document.location.href='/#{resource}/'+escape(this.value)"
         - case resource
           - when :books
             - books.each do |book2|
@@ -636,7 +627,7 @@ header#page-header.page-header
               option value=val selected=(val == value) = "#{val} (#{count} books)"
       javascript:
         $(function() {
-          new SlimSelect({select: '#slim-single-select'})
+          new SlimSelect({select: '#slim-single-select1'})
         });
 
 
