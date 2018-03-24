@@ -8,8 +8,16 @@ require 'newrelic_rpm'
 
 require './models'
 
-MIN_WORD_CLOUD_COUNT = 3
+MIN_WORD_CLOUD_COUNT = 2
 PAGE_HEADER_HEIGHT = 44 # TODO pass this in to sass somehow
+
+INDEXED_RESOURCES = %i(
+  audience
+  awards
+  dewey_class
+  edition
+  series_title
+).freeze
 
 RESOURCE_VIEWS = {
   authors:         :list,
@@ -20,12 +28,12 @@ RESOURCE_VIEWS = {
   returns:         :cal_heatmap,
   subjects:        :word_cloud,
   words:           :word_cloud
-}.freeze
+}.merge(Hash[INDEXED_RESOURCES.map { |resource| [resource, :word_cloud] }]).freeze
 
 DATE_RESOURCES = %i(
   borrows
   returns
-)
+).freeze
 
 
 def git_sha
@@ -38,12 +46,14 @@ def books(opts = {})
   else
     resource, value = *opts.flatten
     case resource
-    when :words
-      current_books_by_word(value)
+    when *INDEXED_RESOURCES
+      current_books_by(resource => value)
     when :borrows
       current_books_by_loan(issued: value)
     when :returns
       current_books_by_loan(returned: value)
+    when :words
+      current_books_by_word(value)
     else
       if (parent = my_books.send(resource).first(value: value))
         parent.books(order: :main_title)
@@ -61,8 +71,12 @@ def current_books_by_word(value)
     }
 end
 
-def current_books_by_loan(opts = {})
-  my_books.loans(opts).map(&:book).sort_by(&:main_title)
+def current_books_by(conditions)
+  my_books.all(conditions).sort_by(&:main_title)
+end
+
+def current_books_by_loan(conditions)
+  my_books.loans(conditions).map(&:book).sort_by(&:main_title)
 end
 
 def get_isbn(book)
@@ -93,26 +107,68 @@ def my_books
   @my_books ||= Book.not_skipped
 end
 
+def audience_book_counts
+  @audience_book_counts ||= my_books.all(:audience.not => nil, order: :audience).map(&:audience)
+    .inject(Hash.new(0)) { |h, key|
+      h[key] += 1
+      print 'd'
+      h
+    }
+end
+
+def awards_book_counts
+  @awards_book_counts ||= my_books.all(:awards.not => nil, order: :awards).map(&:awards)
+    .inject(Hash.new(0)) { |h, key|
+      h[key] += 1
+      print 'w'
+      h
+    }
+end
+
+def dewey_class_book_counts
+  @dewey_class_book_counts ||= my_books.all(:dewey_class.not => nil, order: :dewey_class).map(&:dewey_class)
+    .inject(Hash.new(0)) { |h, key|
+      h[key] += 1
+      print 'd'
+      h
+    }
+end
+
+def edition_book_counts
+  @edition_book_counts ||= my_books.all(:edition.not => nil, order: :edition).map(&:edition)
+    .inject(Hash.new(0)) { |h, key|
+      h[key] += 1
+      print 'e'
+      h
+    }
+end
+
+def series_title_book_counts
+  @series_title_book_counts ||= my_books.all(:series_title.not => nil, order: :series_title).map(&:series_title)
+    .inject(Hash.new(0)) { |h, key|
+      h[key] += 1
+      print 't'
+      h
+    }
+end
+
 def authors_book_counts
   @authors_book_counts ||= my_books.author_books.all(order: :author_value)
-    .inject({}) { |h, author_book|
+    .inject(Hash.new(0)) { |h, author_book|
       author_value = author_book.author_value
-      count = h[author_value] || 0
+      h[author_value] += 1
       print 'a'
-      h.update(author_value => count+1)
+      h
     }
-    # sort by count...
-    # .sort_by { |k, v| [0 - v, k] }
-    # .to_h
 end
 
 def prc_year_levels_book_counts
   @prc_year_levels_book_counts ||= my_books.book_prc_year_levels.all(order: :prc_year_level_value)
-    .inject({}) { |h, book_prc_year_level|
+    .inject(Hash.new(0)) { |h, book_prc_year_level|
       prc_year_level_value = book_prc_year_level.prc_year_level_value
-      count = h[prc_year_level_value] || 0
+      h[prc_year_level_value] += 1
       print 'p'
-      h.update(prc_year_level_value => count+1)
+      h
     }
     .sort_by { |k, v| [0 - v, k] }
     .to_h
@@ -179,7 +235,7 @@ def word_cloud_json(resource)
       html: {
         title: count
       }
-    } if count > MIN_WORD_CLOUD_COUNT
+    } if count >= MIN_WORD_CLOUD_COUNT
   end.compact.to_json
 end
 
@@ -189,7 +245,7 @@ configure do
   set :stopwords, Stopwords::Snowball::Filter.new("en")
   set :stemmer, UEAStemmer.new
 
-  %i(authors subjects prc_year_levels borrows returns words).each do |assoc|
+  (INDEXED_RESOURCES+%i(authors subjects prc_year_levels borrows returns words)).each do |assoc|
     sym = "#{assoc}_book_counts".to_sym
     set sym, send(sym)
   end
@@ -567,12 +623,10 @@ header#page-header.page-header
       - RESOURCE_VIEWS.each do |resource2, view|
         option value=resource2 selected=(resource == resource2) = resource2
     javascript:
-      $(function() {
-        new SlimSelect({select: '#slim-single-select0'})
-      });
+      new SlimSelect({select: '#slim-single-select0'})
     - if defined?(value)
       | /
-      select#slim-single-select onChange="document.location.href='/#{resource}/'+this.value"
+      select#slim-single-select onChange="document.location.href='/#{resource}/'+escape(this.value)"
         - case resource
           - when :books
             - books.each do |book2|

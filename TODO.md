@@ -7,23 +7,24 @@ TODO
       * loans
       * reads
       * prc reads
-- [ ] collapseable breadcrumbs (eg. "a..> Willems, Mo")
-- [ ] saved list availabilites json
-      * display
-- [ ] rename prc_year_levels to prc
-- [ ] rename books_saved to saved
-- [ ] moar indexes
+- [x] moar indexes
+      ** dewey_class (eg. [E])
+      ** audience (eg. For children)
+      ** series_title (eg. ["Victorian Premier's Reading Challenge"])
+      ** awards (eg. "Caldecott Medal 2013.")
       * edition
       * imprint (eg. Fitzroy, Vic. : Black Dog Books, 2007.)
       * collation (eg. 34 unnumbered pages : colour illustrations ; 21 x 27 cm)
         * parse collation
       * notes (eg. Cover title.)
       * word cloud on description
-      * dewey_class (eg. [E])
       * lc_class (eg. PZ7.V827)
       * language
-      * series_title (eg. ["Victorian Premier's Reading Challenge"])
-      * audience (eg. For children)
+- [ ] collapseable breadcrumbs (eg. "a..> Willems, Mo")
+- [ ] saved list availabilites json
+      * display
+- [ ] rename prc_year_levels to prc
+- [ ] rename books_saved to saved
 - [ ] authors
       * parse (first_name, last_name)
       * consolidate duplicates
