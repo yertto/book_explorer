@@ -22,6 +22,7 @@ INDEXED_RESOURCES = %i(
 RESOURCE_VIEWS = {
   authors:         :list,
   books:           :books,
+  current_loans:   :books,
   saved:           :books,
   borrows:         :cal_heatmap,
   prc_year_levels: :word_cloud,
@@ -32,6 +33,7 @@ RESOURCE_VIEWS = {
 
 DATE_RESOURCES = %i(
   borrows
+  current_loans
   returns
 ).freeze
 
@@ -50,6 +52,8 @@ def books(opts = {})
       current_books_by(resource => value)
     when :borrows
       current_books_by_loan(issued: value)
+    when :current_loans
+      current_books_on_loan(due: value)
     when :returns
       current_books_by_loan(returned: value)
     when :words
@@ -77,6 +81,10 @@ end
 
 def current_books_by_loan(conditions)
   my_books.loans(conditions).map(&:book).sort_by(&:main_title)
+end
+
+def current_books_on_loan(conditions)
+  my_books.current_loans(conditions).map(&:book)
 end
 
 def get_isbn(book)
@@ -188,6 +196,15 @@ def returns_book_counts
     }
 end
 
+def current_loans_book_counts
+  @current_loans_book_counts ||= my_books.current_loans.all(order: :due)
+    .inject(Hash.new(0)) { |h, res|
+      print 'd'
+      h[res.due] += 1
+      h
+    }
+end
+
 def subjects_book_counts
   @subjects_book_counts ||= my_books.book_subjects.all(order: :subject_value)
     .inject(Hash.new(0)) { |h, res|
@@ -266,7 +283,12 @@ end
 
 RESOURCE_VIEWS.each do |resource, view|
   locals = { resource: resource }
-  locals.update(books: books.all(list_saved: true)) if resource == :saved
+  case resource
+  when :saved
+    locals.update(books: books.all(list_saved: true))
+  when :current_loans
+    locals.update(books: current_books_on_loan(order: :due))
+  end
   get resource_path(resource) do
     slim view, locals: locals
   end
@@ -529,6 +551,15 @@ body
         - book_count = settings.authors_book_counts[author]
         a rel="author" href=resource_path(:authors, author) = (book_count && book_count > 1) ? "#{author} (#{book_count})" : author
         |&nbsp;
+    - if !book.current_loans.empty?
+      table border=1
+        tr
+          th: a href=resource_path(:current_loans) due
+          th status
+        - book.current_loans.each do |current_loan|
+          tr
+            td: a href=resource_path(:current_loans, current_loan.due) = current_loan.due
+            td bgcolor="#{"red" if current_loan.status == "Renewed 4 times"}" = current_loan.status
 == yield if block_given?
 
 
@@ -620,7 +651,7 @@ header#page-header.page-header
               option value=val selected=(val == value) = "#{val} (#{count} books)"
       javascript:
         $(function() {
-          new SlimSelect({select: '#slim-single-select1', showSearch: false})
+          new SlimSelect({select: '#slim-single-select1'})
         });
 
 

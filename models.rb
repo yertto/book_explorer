@@ -66,6 +66,7 @@ class Book
   has n, :subjects , through: Resource
 
   has n, :prc_year_levels , through: Resource
+  has n, :current_loans
   has n, :loans
 
   property :id                  , Serial
@@ -178,7 +179,7 @@ class Book
   end
 
   def to_s
-    "#{isbn} : #{main_title}#{loans.empty? ? "" : " (loans: #{loans.count})"}#{list_saved? ? " [S]" : ""}"
+    "#{isbn} : #{main_title}#{loans.empty? ? "" : " (loans: #{loans.count})"}#{list_saved? ? " [S]" : ""}#{"[L]" unless current_loans.empty?}"
   end
 end
 
@@ -240,8 +241,21 @@ class Loan
 
   property :id , Serial
 
-  property :issued , Date
-  property :returned , Date
+  property :issued   , Date   , key: true , required: false
+  property :returned , Date   , key: true , required: false
+
+  timestamps :at
+end
+
+class CurrentLoan
+  include DataMapper::Resource
+
+  belongs_to :book
+
+  property :id , Serial
+
+  property :due    , Date   , key: true , required: false
+  property :status , String , key: true , required: false
 
   timestamps :at
 end

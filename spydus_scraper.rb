@@ -111,7 +111,12 @@ class SpydusScraper
   end
 
   def do_scrape
-    scrape(current_loans)
+    CurrentLoan.destroy
+    scrape(current_loans) do |book, link|
+      due, status = link.node.parent.parent.children[-2..-1].map(&:text)
+      book.current_loans.first_or_new(due: due, status: status)
+    end
+
     scrape(previous_loans) do |book, link|
       issued, returned = link.node.parent.parent.children[3..4].map(&:text)
       book.loans.first_or_new(issued: issued, returned: returned)
