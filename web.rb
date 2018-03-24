@@ -14,12 +14,18 @@ PAGE_HEADER_HEIGHT = 44 # TODO pass this in to sass somehow
 RESOURCE_VIEWS = {
   authors:         :list,
   books:           :books,
-  books_saved:     :books_saved,
-  loans:           :loans,
+  saved:           :books,
+  borrows:         :cal_heatmap,
   prc_year_levels: :word_cloud,
+  returns:         :cal_heatmap,
   subjects:        :word_cloud,
   words:           :word_cloud
 }.freeze
+
+DATE_RESOURCES = %i(
+  borrows
+  returns
+)
 
 
 def git_sha
@@ -34,8 +40,10 @@ def books(opts = {})
     case resource
     when :words
       current_books_by_word(value)
-    when :loans
-      current_books_by_loan_issued(value)
+    when :borrows
+      current_books_by_loan(issued: value)
+    when :returns
+      current_books_by_loan(returned: value)
     else
       if (parent = my_books.send(resource).first(value: value))
         parent.books(order: :main_title)
@@ -53,8 +61,8 @@ def current_books_by_word(value)
     }
 end
 
-def current_books_by_loan_issued(value)
-  my_books.loans(issued: value).map(&:book).sort_by(&:main_title)
+def current_books_by_loan(opts = {})
+  my_books.loans(opts).map(&:book).sort_by(&:main_title)
 end
 
 def get_isbn(book)
@@ -110,12 +118,21 @@ def prc_year_levels_book_counts
     .to_h
 end
 
-def loans_book_counts
-  @loans_book_counts ||= my_books.loans.all(order: :issued)
-    .inject({}) { |h, loan|
-      print 'l'
-      h[loan.issued] ||= 0
+def borrows_book_counts
+  @borrows_book_counts ||= my_books.loans.all(order: :issued)
+    .inject(Hash.new(0)) { |h, loan|
+      print 'b'
       h[loan.issued] += 1
+      h
+    }
+    .to_h
+end
+
+def returns_book_counts
+  @returns_book_counts ||= my_books.loans.all(order: :returned)
+    .inject(Hash.new(0)) { |h, loan|
+      print 'r'
+      h[loan.returned] += 1
       h
     }
     .to_h
@@ -172,7 +189,7 @@ configure do
   set :stopwords, Stopwords::Snowball::Filter.new("en")
   set :stemmer, UEAStemmer.new
 
-  %i(authors subjects prc_year_levels loans words).each do |assoc|
+  %i(authors subjects prc_year_levels borrows returns words).each do |assoc|
     sym = "#{assoc}_book_counts".to_sym
     set sym, send(sym)
   end
@@ -192,15 +209,17 @@ get '/index.css' do
   sass :style
 end
 
-get '/loans.json' do
+get '/:resource.json' do |resource|
   headers 'Access-Control-Allow-Origin' => '*'
   content_type :json
-  settings.loans_book_counts.map { |date, count| [date.to_time.to_i*1000, count] }.to_json
+  Hash[settings.send("#{resource}_book_counts").map { |date, count| [date.to_time.to_i, count] }].to_json
 end
 
 RESOURCE_VIEWS.each do |resource, view|
+  locals = { resource: resource }
+  locals.update(books: books.all(list_saved: true)) if resource == :saved
   get resource_path(resource) do
-    slim view, locals: { resource: resource }
+    slim view, locals: locals
   end
 end
 
@@ -210,6 +229,11 @@ end
 
 get '/:resource/:value' do |resource, value|
   resource = resource.to_sym
+  case resource
+  when *DATE_RESOURCES
+    value = Date.parse(value)
+  end
+
   books = books(resource => value)
   slim :books, locals: {
     resource: resource,
@@ -483,12 +507,19 @@ body
   - if !book.loans.empty?
     .book__loans
       span.title
-        a href=resource_path(:loans) = "Loan(s):"
-      ol
-        - book.loans(order: :issued).each do |loan|
-          li
-            a href=resource_path(:loans, loan.issued) = loan.issued
-            small= " (Returned #{loan.returned})"
+        a href=resource_path(:borrows) = "Loan(s):"
+      table border=1
+        tr
+          th
+          th borrowed
+          th returned
+          - book.loans(order: :issued).each_with_index do |loan, index|
+            tr
+              td = index+1
+              td
+                a href=resource_path(:borrows, loan.issued) = loan.issued
+              td
+                a href=resource_path(:returns, loan.returned) = loan.returned
 
 
 @@ _books
@@ -520,7 +551,12 @@ table
 
 @@ books
 == slim :_resource_header, locals: locals
-main == slim (params.empty? ? :_books_short : :_books), locals: { books: books }
+== slim (params.empty? ? :_books_short : :_books), locals: { books: books }
+
+
+@@ books_saved
+== slim :_resource_header, locals: { resource: resource }
+== slim :_books, locals: { books: books.all(list_saved: true) }
 
 
 @@ _resource_header
@@ -557,53 +593,29 @@ header#page-header.page-header
     a href=resource_path(resource, res) = "#{res} (#{count} books)"
 
 
-@@ books_saved
+@@ cal_heatmap
 == slim :_resource_header, locals: { resource: resource }
-== slim :_books, locals: { books: books.all(list_saved: true) }
-
-
-@@ loans
-== slim :_resource_header, locals: { resource: resource }
-#loans_graph
+#cal-heatmap
+button class="btn" id="previousSelector-a-previous" Previous
+button class="btn" id="previousSelector-a-next" Next
 javascript:
-  $.getJSON(
-    '/loans.json',
-    function(data) {
-      Highcharts.chart('loans_graph', {
-        chart: {
-          zoomType: 'x'
-        },
-        title: {
-          text: ''
-        },
-        xAxis: {
-          type: 'datetime'
-        },
-        exporting: {
-          enabled: false
-        },
-        credits: {
-          enabled: false
-        },
-        tooltip: {
-          xDateFormat: '%Y-%m-%d'
-        },
-        yAxis: {
-          title: {
-            text: 'Books'
-          }
-        },
-        legend: {
-          enabled: false
-        },
-        series: [{
-          type: 'bar',
-          name: 'books',
-          data: data
-        }]
-      });
+  var cal = new CalHeatMap();
+  var date = new Date();
+  date.setFullYear( date.getFullYear() - 1 );
+  cal.init({
+    data: '/#{resource}.json',
+    domain: "month",
+    itemName: ["book", "books"],
+    start: date,
+    previousSelector: "#previousSelector-a-previous",
+    nextSelector: "#previousSelector-a-next",
+    onClick: function(date, count) {
+      if (count > 0) {
+        var yyyy_mm_dd = date.getFullYear()+'-'+(date.getMonth()+1)+'-'+date.getDate();
+        document.location.href='/#{resource}/'+ yyyy_mm_dd
+      }
     }
-  );
+  })
 
 
 @@ word_cloud
@@ -641,13 +653,17 @@ html lang="en"
     meta http-equiv="x-ua-compatible" content="ie=edge"
     meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0, user-scalable=0, width=device-width"
     link href="/index.css" rel="stylesheet" type="text/css"
-    link href="/jqcloud.min.css" rel="stylesheet" type="text/css"
     link href="https://fonts.googleapis.com/css?family=Quicksand:500" rel="stylesheet"
-    link href="/slimselect.min.css" rel="stylesheet" type="text/css"
+
+    link href="/jqcloud.min.css" rel="stylesheet" type="text/css"
     script src="https://code.jquery.com/jquery-3.3.1.min.js"
     script src="/jqcloud.min.js"
-    script src="https://code.highcharts.com/highcharts.js"
-    script src="https://code.highcharts.com/modules/exporting.js"
+
+    script src="//d3js.org/d3.v3.min.js"
+    script src="//cdn.jsdelivr.net/cal-heatmap/3.3.10/cal-heatmap.min.js"
+    link rel="stylesheet" href="//cdn.jsdelivr.net/cal-heatmap/3.3.10/cal-heatmap.css"
+
+    link href="/slimselect.min.css" rel="stylesheet" type="text/css"
     script src="/slimselect.min.js"
 
   body

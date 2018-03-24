@@ -3,7 +3,7 @@ TODO
 - [x] graph /books/loans
 - [x] drop /books namespace (to save some real estate on mobile)
 - [x] add a dropdown to /books/:associations (see http://slimselectjs.com)
-- [ ] calendar heatmap (http://cal-heatmap.com or https://github.com/DKirwan/calendar-heatmap)
+- [x] calendar heatmap (http://cal-heatmap.com or https://github.com/DKirwan/calendar-heatmap)
       * loans
       * reads
       * prc reads
