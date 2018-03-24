@@ -21,6 +21,8 @@ TODO
       * lc_class (eg. PZ7.V827)
       * language
 - [x] rename books_saved to saved
+- [ ] *much* smaller book_short view
+- [ ] BUG: dropdown brings up keyboard on mobile
 - [ ] record books read (ie. digitize paper logs)
 - [ ] rename prc_year_levels to prc
 - [ ] collapseable breadcrumbs (eg. "a..> Willems, Mo")
