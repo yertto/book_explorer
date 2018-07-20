@@ -17,7 +17,7 @@ class PremiersReadingChallengeList
 
     def items
       @items ||= begin
-        CSV.foreach("premiers_reading_challenge-2017.tsv", col_sep: "\t", headers: true).inject({}) do |items, row|
+        CSV.foreach("premiers_reading_challenge.tsv", col_sep: "\t", headers: true).inject({}) do |items, row|
           if (isbn = row["ISBN"])
             items[isbn.gsub(/-/, '')] = {
               author: row["Author"],
