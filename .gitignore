@@ -6,3 +6,4 @@ set_skipped_isbn
 .rbenv-vars
 deleted_books.tsv
 log
+reads.tsv

@@ -673,6 +673,7 @@ javascript:
   var cal = new CalHeatMap();
   var date = new Date();
   date.setFullYear( date.getFullYear() - 1 );
+  date.setMonth( (date.getMonth() + 1) % 12 );
   cal.init({
     data: '/#{resource}.json',
     domain: "month",
