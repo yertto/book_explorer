@@ -2,7 +2,7 @@ require 'mechanize'
 require './models'
 
 class SpydusScraper
-  HOME_URL_PAT="https://%s/cgi-bin/spydus.exe/MSGTRN/OPAC/HOME"
+  HOME_URL_PAT="https://wml.spydus.com/cgi-bin/spydus.exe/MSGTRN/WPAC/LOGINB"
   ONE_DAY = 60*60*24
 
   attr_reader :card
@@ -20,7 +20,7 @@ class SpydusScraper
   end
 
   def login_form
-    @login_form = agent.get(home_url).form.tap { |f|
+    @login_form = agent.get(home_url).form_with(id: 'frmLogin').tap { |f|
       f.BRWLID = card.number
       f.BRWLPWD = card.pin
     }
@@ -30,24 +30,20 @@ class SpydusScraper
     @home ||= login_form.submit.meta_refresh.first.click
   end
 
-  def home2
-    @home2 ||= home.link_with(text: "Home").click
-  end
-
-  def my_account
-    @my_account ||= home.link_with(text: "My Account").click.meta_refresh.first.click
-  end
-
   def my_savedlist
-    @my_savedlist ||= home2.link_with(text: "My SavedList").click
+    @my_savedlist ||= home.link_with(text: "View all savedlists").click
+  end
+
+  def history
+    @history ||= home.link_with(text: 'History').click
   end
 
   def previous_loans
-    @previous_loans ||= my_account.link_with(text: 'Previous loans').click
+    @previous_loans ||= history.link_with(text: /Previous loans/).click
   end
 
   def current_loans
-    @current_loans ||= my_account.link_with(text: 'Current loans').click
+    @current_loans ||= home.link_with(text: 'Current loans').click
   end
 
   def snake_sym(value)
@@ -63,9 +59,10 @@ class SpydusScraper
 
   def book_attributes_from(link, irn)
     book_page = link.click
-    book_attributes = book_page.search('//span[@class="bold"]').inject({}) { |h, row|
-      key = snake_sym(row.parent.parent.elements[0].text[/(.*): /, 1])
-      value = row.parent.parent.elements[2]
+    book_page_full = book_page.link_with(text: link.text).click
+    book_attributes = book_page_full.search('//div[@class="col-sm-3 col-md-3 fd-caption"]').inject({}) { |h, row|
+      key = snake_sym(row.parent.elements[0].text[/(.*): /, 1])
+      value = row.next
       value = value.elements.size > 1 ? value.elements.map(&:text).select { |v| v.size > 0 }: value.text
       h.update(key => value)
     }
@@ -74,7 +71,8 @@ class SpydusScraper
       book_attributes[:img_url] = img.src
     end
 
-    book_attributes[:list_saved] = !book_page.search('//span[text()="record saved"]').empty?
+    # TODO - test this works
+    book_attributes[:list_saved] = !book_page.search('//a[@title="Remove this item from your current list"]/i[@class="fa fa-bookmark-o"]')
     book_attributes[:irn] = irn
     book_attributes
   end
@@ -92,8 +90,7 @@ class SpydusScraper
 
   def scrape(page)
     begin
-#      page.links_with(href: %r{/FULL/OPAC/ALLENQ/}).each do |link|
-      page.links_with(href: /.*IRN\(\d+\).*/).each do |link|
+      page.links_with(href: /.*IRN\(\d+\)&NAVLVL=SET/).each do |link|
         irn = link.href[/IRN\((\d+)\)/, 1]
         book = first_or_create_book(link, irn)
         if book.skip?
@@ -113,12 +110,12 @@ class SpydusScraper
   def do_scrape
     CurrentLoan.destroy
     scrape(current_loans) do |book, link|
-      due, status = link.node.parent.parent.children[-2..-1].map(&:text)
+      due, status = link.node.parent.parent.parent.parent.children[-3..-2].map(&:text)
       book.current_loans.first_or_new(due: due, status: status)
     end
 
     scrape(previous_loans) do |book, link|
-      issued, returned = link.node.parent.parent.children[3..4].map(&:text)
+      issued, returned = link.node.parent.parent.parent.children[3..4].map(&:text)
       book.loans.first_or_new(issued: issued, returned: returned)
     end
   end
@@ -137,7 +134,13 @@ class SpydusScraper
   end
 
   def update_locations_for_title(h, table, title)
-    table.xpath('tr')[1..-1].each do |row|
+    rows = table.xpath('//tr')
+    if rows.empty?
+      puts "no rows for #{title.inspect}"
+      return
+    end
+
+    rows[1..-1].each do |row|
       location, collection, call_number, status = row.xpath('td').map(&:text)
       if status == "Available"
         h[location] ||= {}
@@ -147,6 +150,12 @@ class SpydusScraper
   end
 
   def update_holdings(h, page)
+    page.links_with(text: 'View availability').each do |availability_link|
+      title = availability_link.node.parent.parent.parent.parent.children[0].text
+      update_locations_for_title(h, availability_link.click, title)
+    end
+    return
+
     page.links_with(text: /see full display for details/).each do |holdings_link|
       holdings_page = holdings_link.click
       title = holdings_page.xpath('//table/tr/td[2]/table/tr/td[3]/a').first.text
@@ -165,7 +174,7 @@ class SpydusScraper
   def location_availabilities
     @location_availabilities ||= begin
       h = {}
-      my_savedlist.links_with(text: /View Savelist Records/).each do |list|
+      my_savedlist.links_with(xpath: '//td[@data-caption="Description"]/span/a').each do |list|
         page = list.click
         begin
           update_holdings(h, page)

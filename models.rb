@@ -136,19 +136,19 @@ class Book
   end
 
   def main_title=(values)
-    super values.first
+    super Array(values).first
   end
 
   def author=(values)
-    self.authors = values.map { |v| Author.first_or_create({ value: v }) }
+    self.authors = Array(values).map { |v| Author.first_or_create({ value: v }) }
   end
 
   def subject=(values)
-    self.subjects = values.map { |v| Subject.first_or_create({ value: v }) }
+    self.subjects = Array(values).map { |v| Subject.first_or_create({ value: v }) }
   end
 
   def bookmark_link=(value)
-    super(value.join)
+    super(Array(value).join)
   end
 
   def fix_isbn
