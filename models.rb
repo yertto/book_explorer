@@ -145,6 +145,7 @@ class Book
     self.authors = Array(values).map do |v|
       v = v.gsub(/, author/, '')
       v = v.gsub(/, illustrator/, '')
+      v = v.gsub(/, artist/, '')
       Author.first_or_create({ value: v })
     end
   end
