@@ -136,11 +136,17 @@ class Book
   end
 
   def main_title=(values)
-    super Array(values).first
+    super Array(values).map { |v|
+      v[/^[^\/]+/, 0].strip
+    }.first
   end
 
   def author=(values)
-    self.authors = Array(values).map { |v| Author.first_or_create({ value: v }) }
+    self.authors = Array(values).map do |v|
+      v = v.gsub(/, author/, '')
+      v = v.gsub(/, illustrator/, '')
+      Author.first_or_create({ value: v })
+    end
   end
 
   def subject=(values)
@@ -149,6 +155,10 @@ class Book
 
   def bookmark_link=(value)
     super(Array(value).join)
+  end
+
+  def isbn=(values)
+    super Array(values).map { |v| v[/\d+/] }.first
   end
 
   def fix_isbn

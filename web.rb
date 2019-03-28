@@ -89,7 +89,7 @@ def current_books_on_loan(conditions)
 end
 
 def get_isbn(book)
-  (book.img_url || '')[/isbn=([^\/]+)/, 1]
+  book.isbn || (book.img_url || '')[/isbn=([^\/]+)/, 1]
 end
 
 def books_path(value=nil)

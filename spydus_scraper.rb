@@ -104,6 +104,8 @@ class SpydusScraper
         puts book
         print "\e[m"
       end
+    rescue => error
+      p error
     end while (next_page = page.link_with(text: 'Next')) && page = next_page.click
   end
 
