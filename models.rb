@@ -141,11 +141,30 @@ class Book
     }.first
   end
 
+  ROLES = [
+    "artist",
+    "author",
+    "(Children's author)",
+    "compiler",
+    "composer",
+    "contributor",
+    "creator",
+    "editor",
+    "ill",
+    "illustrator",
+    "(illustrator)",
+    "joint author",
+    "performer",
+    "publisher",
+    "translator",
+    "translator publisher",
+    "writer of preface",
+  ]
   def author=(values)
     self.authors = Array(values).map do |v|
-      v = v.gsub(/, author/, '')
-      v = v.gsub(/, illustrator/, '')
-      v = v.gsub(/, artist/, '')
+      ROLES.each do |role|
+        v = v.gsub(%r(, #{role}), '')
+      end
       Author.first_or_create({ value: v })
     end
   end
@@ -179,7 +198,8 @@ class Book
 
   def sound_recording?
     main_title.end_with?("[sound recording]") ||
-      collation =~ /audio/
+      collation =~ /audio/ ||
+      collation =~ /CD/
   end
 
   def skip?
